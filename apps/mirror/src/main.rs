@@ -6,16 +6,23 @@ mod capture;
 mod engine;
 mod mapping;
 mod pattern;
+mod process;
+mod profiles;
+mod razer;
 mod settings;
 mod startup;
+mod tray;
 mod ui;
+mod watcher;
 
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicBool, AtomicU64};
+use std::sync::{Arc, Mutex, PoisonError};
 
 use eframe::egui;
 
 use crate::capture::Request;
-use crate::engine::Engine;
+use crate::engine::{Command, Engine};
+use crate::profiles::Library;
 use crate::settings::Settings;
 
 fn main() -> eframe::Result {
@@ -35,7 +42,9 @@ fn main() -> eframe::Result {
     // shows it off.
     let _ = startup::migrate();
     log_panics();
-    let (settings, load_problem) = Settings::load();
+    let (library, load_problem) = Library::load();
+    let settings = library.current();
+    let library = Arc::new(Mutex::new(library));
     let requests = Arc::new(Mutex::new(Request {
         display: settings.display,
         fps: settings.fps,
@@ -46,7 +55,12 @@ fn main() -> eframe::Result {
         viewport: egui::ViewportBuilder::default()
             .with_title("Govee Mirror PC")
             .with_inner_size([1320.0, 860.0])
-            .with_min_inner_size([900.0, 600.0]),
+            .with_min_inner_size([900.0, 600.0])
+            .with_icon(Arc::new(egui::IconData {
+                rgba: pattern::icon(64),
+                width: 64,
+                height: 64,
+            })),
         ..Default::default()
     };
     eframe::run_native(
@@ -63,8 +77,27 @@ fn main() -> eframe::Result {
             if let Some(problem) = load_problem {
                 engine::lock(&engine.status).warnings.push(problem);
             }
+            let quitting = Arc::new(AtomicBool::new(false));
+            let tray = tray::spawn(&cc.egui_ctx, engine.remote(), Arc::clone(&quitting));
+            let shell = ui::Shell::new(minimized, tray, quitting);
+            let switched = Arc::new(AtomicU64::new(0));
+            let send = engine.remote();
+            let to_capture = Arc::clone(&requests);
+            watcher::spawn(
+                Arc::clone(&library),
+                move |settings: Settings| {
+                    *to_capture.lock().unwrap_or_else(PoisonError::into_inner) = Request {
+                        display: settings.display,
+                        fps: settings.fps,
+                    };
+                    send(Command::Settings(Box::new(settings)));
+                },
+                Arc::clone(&switched),
+                cc.egui_ctx.clone(),
+            );
+            let profiles = ui::Profiles::new(library, switched);
             Ok(Box::new(ui::App::new(
-                runtime, engine, capture, requests, settings, minimized,
+                runtime, engine, capture, requests, settings, shell, profiles,
             )))
         }),
     )

@@ -6,8 +6,9 @@ use std::collections::BTreeMap;
 use eframe::egui::{self, Align2, Color32, FontId, RichText, Sense, Stroke, Ui, vec2};
 
 use crate::engine::{Command, Status};
-use crate::settings::Settings;
-use crate::ui::{Brush, segment_color, text_on};
+use crate::mapping::fill;
+use crate::settings::{Assignment, Settings};
+use crate::ui::{Brush, Tool, segment_color, text_on};
 
 const SWATCH: f32 = 34.0;
 
@@ -43,12 +44,10 @@ pub fn show(
     }
 
     let mut cells: BTreeMap<usize, usize> = BTreeMap::new();
-    for assignment in settings
-        .assignments
-        .values()
-        .filter(|a| a.target == target.id)
-    {
-        *cells.entry(assignment.segment).or_default() += 1;
+    for (_, assignment) in settings.entries().filter(|(_, a)| a.target == target.id) {
+        for segment in assignment.segments() {
+            *cells.entry(segment).or_default() += 1;
+        }
     }
 
     ui.add_space(6.0);
@@ -97,8 +96,10 @@ pub fn show(
         .weak(),
     );
     ui.add_space(8.0);
+    changed |= box_fill(ui, settings, brush, &target.id, zones);
+    ui.add_space(8.0);
     if ui.button("Clear this light's cells").clicked() {
-        settings.assignments.retain(|_, a| a.target != target.id);
+        settings.clear_target(&target.id);
         changed = true;
     }
     if !settings.assignments.is_empty() && ui.button("Clear every cell").clicked() {
@@ -106,4 +107,69 @@ pub fn show(
         changed = true;
     }
     (commands, changed)
+}
+
+/// The tool switch, and with the Box tool, the range that fills the box.
+/// Answers whether the settings changed.
+fn box_fill(
+    ui: &mut Ui,
+    settings: &mut Settings,
+    brush: &mut Brush,
+    target: &str,
+    zones: usize,
+) -> bool {
+    let mut changed = false;
+    ui.horizontal(|ui| {
+        ui.label("Tool");
+        ui.selectable_value(&mut brush.tool, Tool::Paint, "Paint");
+        ui.selectable_value(&mut brush.tool, Tool::Box, "Box");
+    });
+    if brush.tool != Tool::Box {
+        return false;
+    }
+    let Some(rect) = brush.boxed else {
+        ui.label(RichText::new("Drag a box over the cells.").weak());
+        return false;
+    };
+    ui.label(format!("Box: {} × {} cells", rect.cols(), rect.rows()));
+
+    // The fields show segment numbers from 1, as the swatches do.
+    let last = zones.max(1);
+    let mut from = (brush.from + 1).min(last);
+    let mut to = brush.to.map_or(last, |to| to + 1).min(last);
+    ui.horizontal(|ui| {
+        ui.add(
+            egui::DragValue::new(&mut from)
+                .range(1..=last)
+                .prefix("From "),
+        );
+        ui.add(egui::DragValue::new(&mut to).range(1..=last).prefix("To "));
+    });
+    brush.from = from - 1;
+    brush.to = Some(to - 1);
+    ui.label(
+        RichText::new(
+            "Left to right, or top to bottom for a tall box. Set To below From to run the other way.",
+        )
+        .weak(),
+    );
+
+    ui.horizontal(|ui| {
+        if ui.button("Fill box").clicked() {
+            for (cell, segment, count) in fill(rect, from - 1, to - 1) {
+                let assignment = Assignment {
+                    target: target.to_owned(),
+                    segment,
+                    count,
+                };
+                changed |= settings.set_cell(cell, assignment);
+            }
+        }
+        if ui.button("Clear box").clicked() {
+            for cell in rect.cells() {
+                changed |= settings.clear_cell(cell, target);
+            }
+        }
+    });
+    changed
 }

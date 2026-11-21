@@ -37,6 +37,8 @@ pub struct Status {
     pub warnings: Vec<String>,
     pub busy: Option<&'static str>,
     pub running: bool,
+    /// Whether a Razer ARGB controller is connected.
+    pub razer: bool,
     pub fps: u32,
     pub stats: HashMap<String, Stats>,
     /// The last failure of a command, per target.

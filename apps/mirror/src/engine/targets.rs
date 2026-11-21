@@ -27,6 +27,8 @@ pub struct Target {
     pub brightness: [i64; 2],
     /// Whether a device file describes the SKU at all.
     pub known: bool,
+    /// The port of the Razer ARGB controller, 0 to 5, for a light that is one.
+    pub razer_port: Option<usize>,
 }
 
 impl Target {
@@ -83,6 +85,7 @@ fn describe(govee: &Govee, device: &Device) -> Target {
             max_zones: 1,
             brightness: [0, 100],
             known: false,
+            razer_port: None,
         };
     };
     let reach = reach(&spec, Mode::Lan);
@@ -111,5 +114,30 @@ fn describe(govee: &Govee, device: &Device) -> Target {
             .and_then(|params| params.range)
             .unwrap_or([0, 100]),
         known: true,
+        razer_port: None,
     }
+}
+
+/// One light per port of the Razer ARGB controller that `leds` gives LEDs,
+/// or nothing where no controller is connected. Each LED is one segment.
+pub fn razer(leds: &[usize; crate::razer::protocol::PORTS]) -> Vec<Target> {
+    if !crate::razer::present() {
+        return Vec::new();
+    }
+    leds.iter()
+        .enumerate()
+        .filter(|(_, count)| **count > 0)
+        .map(|(port, &count)| Target {
+            id: format!("razer-argb:{}", port + 1),
+            name: format!("Razer ARGB port {}", port + 1),
+            sku: "Razer ARGB controller".to_owned(),
+            app_zones: Some(count),
+            native_zones: None,
+            full_zones: None,
+            max_zones: count,
+            brightness: [0, 100],
+            known: true,
+            razer_port: Some(port),
+        })
+        .collect()
 }

@@ -2,13 +2,25 @@
 
 A replacement for DreamView on Windows. I got sick of the Govee app, so this
 mirrors the screen onto Govee lights straight over your own network: no
-account, no cloud, no phone.
+account, no cloud, no phone. It also drives the Razer Wired ARGB Controller
+over USB, with no Synapse.
 
 ## Features
 
 - **Screen mirror.** A grid of square cells covers the screen, and you paint
-  each cell onto one segment of one light. A segment that several cells feed
-  takes their average.
+  each cell onto the segments of your lights. One cell can feed several
+  lights, and a segment that several cells feed takes their average.
+- **Box fill.** Draw a box over the cells and type a range, such as 1 to 60:
+  the segments spread across the box with no gap. 60 to 1 runs the other
+  way.
+- **Razer Wired ARGB Controller.** Each port is a light, and each LED a
+  segment. It runs over USB with Synapse closed, and Exit hands the LEDs
+  back to the controller's own effect.
+- **Profiles.** Keep several setups, and link a program to one: while that
+  program runs, the app switches to its profile. The process list is read
+  every 5 seconds, and only while a profile names a program.
+- **Resolution per light.** Mirror at the light's finest count, or at a
+  segment count set by hand.
 - **More segments than the Govee app.** It drives every zone the light's
   segment channel renders: 20 on the H61F2 strip, where the app shows 10.
 - **Segment palette.** Each light's segments show as numbered swatches, one
@@ -22,7 +34,10 @@ account, no cloud, no phone.
   grey, and smoothing calms them over time.
 - **Blend between segments.** The light fades from one segment to the next,
   where you turn it on.
-- **Starts on its own.** Start with Windows, minimized, and start the mirror
+- **Lives in the tray.** Closing the window keeps the mirror on, in the
+  notification area. Right-click the icon to show the window, start or stop
+  the mirror, turn start with Windows off, or exit.
+- **Starts on its own.** Start with Windows, in the tray, and start the mirror
   on launch.
 - **Light on the machine.** The GPU shrinks the screen and about 256 pixels
   come back per frame. A screen that does not change costs nothing.

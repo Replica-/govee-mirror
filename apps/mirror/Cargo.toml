@@ -1,9 +1,9 @@
 [package]
 name = "govee-mirror-pc"
 description = "A replacement for DreamView on Windows: mirror the screen onto Govee lights over the LAN, one grid cell to one segment. Unofficial."
-version = "0.1.1"
+version = "0.2.0"
 edition = "2024"
-rust-version = "1.89"
+rust-version = "1.90"
 license = "MIT"
 repository = "https://github.com/damient/govee-toolkit"
 authors = ["damient"]
@@ -23,11 +23,15 @@ eframe = { version = "0.37", default-features = false, features = [
   "glow",
 ] }
 govee-toolkit = { path = "../../packages/rust", default-features = false, features = ["lan"] }
+# The Razer ARGB controller, over USB HID.
+hidapi = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
 
 [target.'cfg(windows)'.dependencies]
+# The tray icon and its menu.
+tray-icon = "0.26"
 # The start-with-Windows entry, through a safe API.
 winreg = "0.56"
 windows = { version = "0.62", features = [
@@ -38,6 +42,8 @@ windows = { version = "0.62", features = [
   "Win32_Graphics_Dxgi_Common",
   # `DXGI_OUTPUT_DESC` carries an `HMONITOR`.
   "Win32_Graphics_Gdi",
+  # The process list, for the profile that a program switches to.
+  "Win32_System_Diagnostics_ToolHelp",
 ] }
 
 [profile.release]

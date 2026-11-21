@@ -6,6 +6,7 @@
 //! waits on the engine.
 
 mod explain;
+mod scan;
 mod status;
 mod targets;
 mod writer;
@@ -56,6 +57,14 @@ impl Engine {
 
     pub fn send(&self, command: Command) {
         let _ = self.commands.send(command);
+    }
+
+    /// A sender that outlives a borrow of the engine, for the tray.
+    pub fn remote(&self) -> impl Fn(Command) + Send + Sync + 'static {
+        let commands = self.commands.clone();
+        move |command| {
+            let _ = commands.send(command);
+        }
     }
 
     /// Stop the mirror and the SDK. The receiver resolves once both are done.
@@ -164,10 +173,19 @@ impl Context {
             Command::Highlight(id, segment) => self.highlight(id, segment).await,
             Command::Quit(_) => {}
             Command::Settings(settings) => {
+                let razer = self.settings.razer_leds != settings.razer_leds;
                 let rebuild = self.settings.grid != settings.grid
                     || self.settings.assignments != settings.assignments
-                    || self.settings.devices != settings.devices;
+                    || self.settings.devices != settings.devices
+                    || razer;
                 self.settings = *settings;
+                if razer {
+                    let mut status = lock(&self.status);
+                    status.targets.retain(|t| t.razer_port.is_none());
+                    status
+                        .targets
+                        .extend(targets::razer(&self.settings.razer_leds));
+                }
                 if rebuild && self.mirror.is_some() {
                     self.stop().await;
                     self.start().await;
@@ -180,24 +198,6 @@ impl Context {
     fn busy(&self, what: Option<&'static str>) {
         lock(&self.status).busy = what;
         (self.repaint)();
-    }
-
-    async fn scan(&mut self) {
-        self.busy(Some("Scanning"));
-        let result = targets::scan(&self.govee).await;
-        let mut status = lock(&self.status);
-        status.busy = None;
-        match result {
-            Ok(targets) => {
-                status.problems = if targets.is_empty() {
-                    vec!["No Govee light answered. Check that LAN Control is on in the Govee Home app.".to_owned()]
-                } else {
-                    Vec::new()
-                };
-                status.targets = targets;
-            }
-            Err(error) => status.problems = vec![format!("The scan failed: {}", explain(&error))],
-        }
     }
 
     fn target(&self, id: &str) -> Option<Target> {
@@ -217,9 +217,8 @@ impl Context {
         self.busy(Some("Starting"));
         let mut used: Vec<String> = self
             .settings
-            .assignments
-            .values()
-            .map(|a| a.target.clone())
+            .entries()
+            .map(|(_, a)| a.target.clone())
             .collect();
         used.sort();
         used.dedup();
@@ -230,16 +229,25 @@ impl Context {
                 failed.insert(id, "not in the last scan".to_owned());
                 continue;
             };
-            match writer::open(
-                &self.govee,
-                &target,
-                self.settings.frame(&target),
-                self.settings.devices.get(&id).is_some_and(|d| d.gradient),
-            )
-            .await
-            {
+            let opened = match target.razer_port {
+                Some(port) => writer::open_razer(
+                    port,
+                    self.settings.zones(&target),
+                    target.max_zones,
+                    self.settings.devices.get(&id).is_some_and(|d| d.gradient),
+                ),
+                None => writer::open(
+                    &self.govee,
+                    &target,
+                    self.settings.frame(&target),
+                    self.settings.devices.get(&id).is_some_and(|d| d.gradient),
+                )
+                .await
+                .map_err(|error| explain(&error)),
+            };
+            match opened {
                 Ok(writer) => drop(writers.insert(id, writer)),
-                Err(error) => drop(failed.insert(id, explain(&error))),
+                Err(error) => drop(failed.insert(id, error)),
             }
         }
         let zones = writers
@@ -247,7 +255,7 @@ impl Context {
             .map(|(id, w)| (id.clone(), w.zones()))
             .collect();
         self.mirror = Some(Mirror {
-            plan: plan(&self.settings.assignments, &zones, self.settings.grid),
+            plan: plan(self.settings.entries(), &zones, self.settings.grid),
             writers,
             state: HashMap::new(),
             highlight: None,
@@ -277,6 +285,12 @@ impl Context {
     }
 
     async fn control(&mut self, id: &str, control: Control) {
+        if id.starts_with("razer-argb:") {
+            return self.message(
+                id,
+                "A Razer port lights only while the mirror runs.".to_owned(),
+            );
+        }
         let handle = match self.govee.device(&DeviceId::new(id), Some(Mode::Lan)) {
             Ok(handle) => handle,
             Err(error) => return self.message(id, explain(&error)),
@@ -303,8 +317,14 @@ impl Context {
             return;
         };
         let (frame, zones) = (self.settings.frame(&target), self.settings.zones(&target));
-        if let Err(error) = writer::highlight(&self.govee, &target, frame, zones, segment).await {
-            self.message(&id, explain(&error));
+        let result = match target.razer_port {
+            Some(port) => writer::highlight_razer(port, zones, target.max_zones, segment).await,
+            None => writer::highlight(&self.govee, &target, frame, zones, segment)
+                .await
+                .map_err(|error| explain(&error)),
+        };
+        if let Err(error) = result {
+            self.message(&id, error);
         }
     }
 

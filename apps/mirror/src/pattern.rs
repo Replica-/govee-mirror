@@ -84,6 +84,25 @@ pub fn draw(
     Some(cells)
 }
 
+/// The color wheel as an icon: `size` × `size` RGBA pixels, transparent
+/// outside the circle.
+pub fn icon(size: u32) -> Vec<u8> {
+    #[allow(clippy::cast_precision_loss)]
+    let half = size as f32 / 2.0;
+    let mut rgba = Vec::with_capacity((size * size * 4) as usize);
+    for y in 0..size {
+        for x in 0..size {
+            #[allow(clippy::cast_precision_loss)]
+            let (dx, dy) = (x as f32 + 0.5 - half, y as f32 + 0.5 - half);
+            let turn = (dx.atan2(-dy) / std::f32::consts::TAU).rem_euclid(1.0);
+            let [r, g, b] = wedge(turn);
+            let alpha = if dx.hypot(dy) <= half { 255 } else { 0 };
+            rgba.extend_from_slice(&[r, g, b, alpha]);
+        }
+    }
+    rgba
+}
+
 /// The wedge of [`WHEEL`] at `turn`, where a whole turn is 1.
 fn wedge(turn: f32) -> [u8; 3] {
     #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
@@ -141,6 +160,20 @@ mod tests {
         assert_ne!(
             draw(Source::Wheel, 4, 4, 1.0, 1.0).unwrap_or_default(),
             wheel
+        );
+    }
+
+    #[test]
+    fn the_icon_is_a_disc_of_the_wheel() {
+        let icon = icon(16);
+        assert_eq!(icon.len(), 16 * 16 * 4);
+        // A corner is outside the circle; the pixel right of the top center
+        // is in the first wedge.
+        assert_eq!(icon[3], 0);
+        let top = (2 * 16 + 8) * 4;
+        assert_eq!(
+            &icon[top..top + 4],
+            &[WHEEL[0][0], WHEEL[0][1], WHEEL[0][2], 255]
         );
     }
 

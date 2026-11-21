@@ -7,8 +7,9 @@ use eframe::egui::{
 };
 
 use crate::engine::Target;
+use crate::mapping::Rect;
 use crate::settings::{Assignment, Cell, Settings};
-use crate::ui::{Brush, segment_color, text_on};
+use crate::ui::{Brush, Tool, segment_color, text_on};
 
 /// Draw the preview and the grid. Answers whether a cell changed.
 pub fn show(
@@ -17,7 +18,7 @@ pub fn show(
     targets: &[Target],
     preview: Option<&TextureHandle>,
     animation: Option<&[[u8; 3]]>,
-    brush: &Brush,
+    brush: &mut Brush,
 ) -> bool {
     let ratio = preview.map_or(16.0 / 9.0, |texture| {
         let [w, h] = texture.size();
@@ -72,19 +73,22 @@ pub fn show(
             row: (((pos.y - area.top()) / ch) as usize).min(grid.rows - 1),
             col: (((pos.x - area.left()) / cw) as usize).min(grid.cols - 1),
         };
+        // Both act on the brush's light alone: the other lights in the cell
+        // keep their segments.
         let erase = ui.input(|i| i.pointer.button_down(PointerButton::Secondary));
-        if erase {
-            changed |= settings.assignments.remove(&cell).is_some();
+        if brush.tool == Tool::Box {
+            let anchor = *brush.anchor.get_or_insert(cell);
+            brush.boxed = Some(Rect::between(anchor, cell));
         } else if let Some(target) = &brush.target {
-            let assignment = Assignment {
-                target: target.clone(),
-                segment: brush.segment,
+            changed |= if erase {
+                settings.clear_cell(cell, target)
+            } else {
+                settings.set_cell(cell, Assignment::one(target, brush.segment))
             };
-            if settings.assignments.get(&cell) != Some(&assignment) {
-                settings.assignments.insert(cell, assignment);
-                changed = true;
-            }
         }
+    }
+    if !response.is_pointer_button_down_on() {
+        brush.anchor = None;
     }
 
     let zones = |id: &str| {
@@ -94,10 +98,18 @@ pub fn show(
             .map_or(1, |t| settings.zones(t))
     };
     let font = FontId::proportional((cw.min(ch) * 0.4).clamp(8.0, 18.0));
-    for (cell, assignment) in &settings.assignments {
+    for (cell, entries) in &settings.assignments {
         if cell.row >= grid.rows || cell.col >= grid.cols {
             continue;
         }
+        // The brush's light shows; another light in the cell shows dimmed.
+        let Some(assignment) = entries
+            .iter()
+            .find(|a| brush.target.as_ref() == Some(&a.target))
+            .or_else(|| entries.first())
+        else {
+            continue;
+        };
         let rect = cell_area(*cell).shrink(1.0);
         let color = segment_color(assignment.segment, zones(&assignment.target));
         let active = brush.target.as_ref() == Some(&assignment.target);
@@ -111,9 +123,19 @@ pub fn show(
             painter.text(
                 rect.center(),
                 Align2::CENTER_CENTER,
-                assignment.segment + 1,
+                run(assignment),
                 font.clone(),
                 text_on(color),
+            );
+        }
+        // How many lights the cell feeds, where it feeds more than one.
+        if entries.len() > 1 && cw.min(ch) >= 14.0 {
+            painter.text(
+                rect.right_top() + vec2(-2.0, 1.0),
+                Align2::RIGHT_TOP,
+                entries.len(),
+                FontId::proportional((cw.min(ch) * 0.25).clamp(7.0, 11.0)),
+                Color32::WHITE,
             );
         }
     }
@@ -128,6 +150,20 @@ pub fn show(
         painter.line_segment([pos2(area.left(), y), pos2(area.right(), y)], line);
     }
 
+    if let Some(rect) = brush.boxed.filter(|_| brush.tool == Tool::Box) {
+        if rect.bottom.row < grid.rows && rect.bottom.col < grid.cols {
+            let outline = cell_area(rect.top).union(cell_area(rect.bottom));
+            painter.rect_stroke(
+                outline,
+                0.0,
+                Stroke::new(2.0, Color32::from_rgb(255, 211, 79)),
+                egui::StrokeKind::Inside,
+            );
+        } else {
+            brush.boxed = None;
+        }
+    }
+
     if let Some(pos) = response.hover_pos() {
         let cell = Cell {
             row: (((pos.y - area.top()) / ch) as usize).min(grid.rows - 1),
@@ -139,21 +175,38 @@ pub fn show(
             Stroke::new(2.0, Color32::WHITE),
             egui::StrokeKind::Inside,
         );
-        if let Some(assignment) = settings.assignments.get(&cell) {
-            let name = targets
+        if let Some(entries) = settings.assignments.get(&cell) {
+            let lines: Vec<String> = entries
                 .iter()
-                .find(|t| t.id == assignment.target)
-                .map_or(assignment.target.as_str(), |t| t.name.as_str());
-            response
-                .on_hover_text_at_pointer(format!("{name} · segment {}", assignment.segment + 1));
+                .map(|a| {
+                    let name = targets
+                        .iter()
+                        .find(|t| t.id == a.target)
+                        .map_or(a.target.as_str(), |t| t.name.as_str());
+                    format!("{name} · segment {}", run(a))
+                })
+                .collect();
+            response.on_hover_text_at_pointer(lines.join(
+                "
+",
+            ));
         }
     }
 
     ui.label(
         egui::RichText::new(
-            "Pick a segment on the right, then click or drag over cells. Right-click clears a cell.",
+            "Pick a segment on the right, then click or drag over cells. A cell can feed several lights. Right-click clears the chosen light from a cell.",
         )
         .weak(),
     );
     changed
+}
+
+/// A cell's segments as the swatches number them: `5`, or `5–8` for a run.
+fn run(assignment: &Assignment) -> String {
+    let first = assignment.segment + 1;
+    match assignment.count {
+        0 | 1 => first.to_string(),
+        count => format!("{first}–{}", first + count - 1),
+    }
 }

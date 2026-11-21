@@ -1,8 +1,11 @@
 //! The window.
 
+mod brush;
 mod devices;
 mod grid;
 mod palette;
+mod profiles;
+mod shell;
 
 use std::time::{Duration, Instant};
 
@@ -15,42 +18,16 @@ use crate::pattern::{self, Source};
 use crate::settings::Settings;
 use crate::startup;
 
+pub use self::brush::{Brush, Tool, segment_color, text_on};
+pub use self::profiles::Profiles;
+pub use self::shell::Shell;
+
 /// How often the window redraws the preview while nothing else asks it to.
 const PREVIEW: Duration = Duration::from_millis(100);
 /// How often the window redraws while the animation runs.
 const ANIMATION: Duration = Duration::from_millis(33);
 /// How long the settings wait after a change before they go to disk.
 const SAVE_DELAY: Duration = Duration::from_millis(500);
-
-/// The light whose segments the palette shows, and the segment that a click
-/// on the grid paints.
-#[derive(Debug, Default)]
-pub struct Brush {
-    pub target: Option<String>,
-    pub segment: usize,
-}
-
-/// One color per segment. The golden-ratio step keeps two neighbors apart in
-/// hue, whatever the count.
-pub fn segment_color(segment: usize, zones: usize) -> Color32 {
-    let hue = if zones <= 12 {
-        segment as f32 / zones.max(1) as f32
-    } else {
-        (segment as f32 * 0.618_034).fract()
-    };
-    egui::ecolor::Hsva::new(hue, 0.8, 0.95, 1.0).into()
-}
-
-/// Black or white, whichever reads on `background`.
-pub fn text_on(background: Color32) -> Color32 {
-    let [r, g, b, _] = background.to_array();
-    let luma = 0.299 * f32::from(r) + 0.587 * f32::from(g) + 0.114 * f32::from(b);
-    if luma > 150.0 {
-        Color32::BLACK
-    } else {
-        Color32::WHITE
-    }
-}
 
 pub struct App {
     runtime: tokio::runtime::Runtime,
@@ -63,8 +40,8 @@ pub struct App {
     shown: u64,
     brush: Brush,
     controls: devices::Controls,
-    /// Minimize on the first frame: the window builder has no such option.
-    minimize: bool,
+    shell: Shell,
+    profiles: Profiles,
     /// The `Run` entry as last read or written.
     with_windows: bool,
 }
@@ -76,7 +53,8 @@ impl App {
         capture: capture::Shared,
         requests: Requests,
         settings: Settings,
-        minimized: bool,
+        shell: Shell,
+        profiles: Profiles,
     ) -> Self {
         Self {
             runtime,
@@ -89,7 +67,8 @@ impl App {
             shown: 0,
             brush: Brush::default(),
             controls: devices::Controls::default(),
-            minimize: minimized,
+            shell,
+            profiles,
             with_windows: startup::enabled(),
         }
     }
@@ -104,6 +83,9 @@ impl App {
             display: self.settings.display,
             fps: self.settings.fps,
         };
+        let mut library = self.profiles.lock();
+        self.profiles.store(&mut library, &self.settings);
+        drop(library);
         self.engine
             .send(Command::Settings(Box::new(self.settings.clone())));
         self.unsaved = Some(Instant::now());
@@ -111,7 +93,12 @@ impl App {
 
     fn save(&mut self) {
         self.unsaved = None;
-        if let Err(error) = self.settings.save() {
+        let saved = {
+            let mut library = self.profiles.lock();
+            self.profiles.store(&mut library, &self.settings);
+            library.save()
+        };
+        if let Err(error) = saved {
             engine::lock(&self.engine.status)
                 .problems
                 .push(format!("The settings were not saved: {error}"));
@@ -141,8 +128,10 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        if std::mem::take(&mut self.minimize) {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Minimized(true));
+        self.shell.frame(&ctx, &mut self.with_windows);
+        if let Some(settings) = self.profiles.switched() {
+            // The watcher has handed these to the engine and the capture.
+            self.settings = settings;
         }
         let (capture_error, screens) = self.refresh_preview(&ctx);
         let status_handle = self.engine.status.clone();
@@ -254,7 +243,7 @@ impl eframe::App for App {
                     .changed();
                 if ui
                     .checkbox(&mut self.with_windows, "Start with Windows")
-                    .on_hover_text("Starts minimized when you sign in")
+                    .on_hover_text("Starts in the tray when you sign in")
                     .changed()
                     && let Err(error) = startup::set(self.with_windows)
                 {
@@ -277,6 +266,15 @@ impl eframe::App for App {
         egui::Panel::left("devices")
             .default_size(300.0)
             .show(ui, |ui| {
+                match self.profiles.panel(ui, &self.settings) {
+                    profiles::Action::Switched => {
+                        self.settings = self.profiles.lock().current();
+                        changed = true;
+                    }
+                    profiles::Action::Edited => self.unsaved = Some(Instant::now()),
+                    profiles::Action::None => {}
+                }
+                ui.separator();
                 ui.horizontal(|ui| {
                     ui.heading("Lights");
                     if ui
@@ -337,7 +335,7 @@ impl eframe::App for App {
                 &status.targets,
                 self.preview.as_ref(),
                 animation.as_deref(),
-                &self.brush,
+                &mut self.brush,
             );
         });
 

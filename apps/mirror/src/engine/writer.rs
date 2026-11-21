@@ -8,6 +8,7 @@ use govee_toolkit::{DeviceId, Govee, Mode, SegmentStream, StreamOptions};
 use tokio::time::sleep;
 
 use super::targets::Target;
+use crate::razer::{self, Controller};
 
 /// What a writer reports once per second.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -23,6 +24,16 @@ pub enum Writer {
     /// One zone, through the `color` command. That command waits for the
     /// device, so one runs at a time and a newer color replaces a waiting one.
     Color(Arc<ColorQueue>),
+    /// One port of the Razer ARGB controller. A write never blocks: the
+    /// controller's thread sends the newest frame.
+    Razer {
+        controller: Arc<Controller>,
+        port: usize,
+        zones: usize,
+        /// LEDs on the port. Each segment covers an even run of them.
+        leds: usize,
+        blend: bool,
+    },
 }
 
 #[derive(Default)]
@@ -63,6 +74,52 @@ pub async fn open(
         })
         .await?;
     Ok(Writer::Stream(stream))
+}
+
+/// Open one port of the Razer ARGB controller: `zones` segments over `leds`
+/// LEDs, faded into each other with `blend`.
+///
+/// # Errors
+///
+/// What the USB stack answered, where no controller is connected or
+/// another program holds it.
+pub fn open_razer(port: usize, zones: usize, leds: usize, blend: bool) -> Result<Writer, String> {
+    Ok(Writer::Razer {
+        controller: razer::acquire()?,
+        port,
+        zones,
+        leds,
+        blend,
+    })
+}
+
+/// Blink one LED of a Razer port white, the others dark. The LEDs go back to
+/// the controller's own effect after it, unless the mirror drives the port.
+///
+/// # Errors
+///
+/// As for [`open_razer`].
+pub async fn highlight_razer(
+    port: usize,
+    zones: usize,
+    leds: usize,
+    segment: usize,
+) -> Result<(), String> {
+    let controller = razer::acquire()?;
+    let mut lit = vec![[0u8; 3]; zones];
+    if let Some(color) = lit.get_mut(segment) {
+        *color = [255, 255, 255];
+    }
+    let lit = razer::spread(&lit, leds, false);
+    let dark = vec![[0u8; 3]; leds];
+    let started = Instant::now();
+    while let Some(on) = blink(started.elapsed()) {
+        controller.set(port, if on { &lit } else { &dark });
+        sleep(Duration::from_millis(20)).await;
+    }
+    // The last frame must leave before the hand-back.
+    sleep(Duration::from_millis(50)).await;
+    Ok(())
 }
 
 /// How many times a highlight lights its segment.
@@ -128,6 +185,7 @@ impl Writer {
         match self {
             Self::Stream(stream) => stream.zones(),
             Self::Color(_) => 1,
+            Self::Razer { zones, .. } => *zones,
         }
     }
 
@@ -141,6 +199,13 @@ impl Writer {
                     ColorQueue::push(queue, govee, id, color);
                 }
             }
+            Self::Razer {
+                controller,
+                port,
+                leds,
+                blend,
+                ..
+            } => controller.set(*port, &razer::spread(colors, *leds, *blend)),
         }
     }
 
@@ -151,6 +216,10 @@ impl Writer {
                 error: stream.error().map(|e| e.to_string()),
             },
             Self::Color(queue) => queue.lock().stats.clone(),
+            Self::Razer { controller, .. } => {
+                let (sent, error) = controller.stats();
+                Stats { sent, error }
+            }
         }
     }
 
@@ -158,6 +227,11 @@ impl Writer {
         match self {
             Self::Stream(stream) => drop(stream.close().await),
             Self::Color(queue) => queue.lock().closed = true,
+            // The port goes dark; the controller hands the LEDs back once the
+            // last port lets go of it.
+            Self::Razer {
+                controller, port, ..
+            } => controller.set(port, &[]),
         }
     }
 }

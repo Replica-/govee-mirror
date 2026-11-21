@@ -1,10 +1,10 @@
 //! The settings of the app, in one JSON file.
 
 use std::collections::BTreeMap;
+use std::env;
 use std::fmt;
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::{env, fs, io};
 
 use serde::{Deserialize, Serialize};
 
@@ -27,9 +27,39 @@ pub struct Cell {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Assignment {
-    /// The MAC the device reports.
+    /// The MAC a Govee light reports, or `razer-argb:<port>`.
     pub target: String,
+    /// The first segment the cell feeds.
     pub segment: usize,
+    /// How many segments the cell feeds, from `segment` up. A box fill that
+    /// spreads more segments than it has cells gives each cell a run.
+    #[serde(default = "one", skip_serializing_if = "is_one")]
+    pub count: usize,
+}
+
+impl Assignment {
+    /// One segment of one light.
+    pub fn one(target: &str, segment: usize) -> Self {
+        Self {
+            target: target.to_owned(),
+            segment,
+            count: 1,
+        }
+    }
+
+    /// The segments the cell feeds.
+    pub fn segments(&self) -> std::ops::Range<usize> {
+        self.segment..self.segment + self.count.max(1)
+    }
+}
+
+fn one() -> usize {
+    1
+}
+
+#[allow(clippy::trivially_copy_pass_by_ref)]
+fn is_one(count: &usize) -> bool {
+    *count == 1
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,10 +95,18 @@ pub struct Settings {
     pub fps: u32,
     /// The share of the previous frame that stays, from 0 to 0.95.
     pub smoothing: f32,
-    pub assignments: BTreeMap<Cell, Assignment>,
+    /// What each cell feeds: one segment per light, and any number of
+    /// lights. An earlier file gives one assignment per cell, and it reads
+    /// as a list of one.
+    #[serde(deserialize_with = "one_or_many")]
+    pub assignments: BTreeMap<Cell, Vec<Assignment>>,
     pub devices: BTreeMap<String, DeviceSettings>,
     /// Start the mirror once the first scan ends.
     pub mirror_on_launch: bool,
+    /// LEDs on each port of the Razer ARGB controller, port 1 first. A port
+    /// with 0 is not a light. The controller keeps its own counts, set in
+    /// Synapse, and these must match them.
+    pub razer_leds: [usize; crate::razer::protocol::PORTS],
     /// How far each color moves from grey, 1 for none. Averaging a patch of
     /// screen pulls colors toward grey, and this pushes them back.
     pub saturation: f32,
@@ -91,6 +129,7 @@ impl Default for Settings {
             assignments: BTreeMap::new(),
             devices: BTreeMap::new(),
             mirror_on_launch: false,
+            razer_leds: [0; crate::razer::protocol::PORTS],
             saturation: 1.3,
             source: Source::Screen,
             moving: true,
@@ -109,37 +148,51 @@ impl Settings {
             .join("mirror.json")
     }
 
-    /// The saved settings, and what went wrong reading them. A missing file
-    /// gives the defaults. A file that does not parse is moved to
-    /// `mirror.json.bad`, so that the first save does not overwrite it.
-    pub fn load() -> (Self, Option<String>) {
-        let path = Self::path();
-        let Ok(text) = fs::read_to_string(&path) else {
-            return (Self::default(), None);
-        };
-        match serde_json::from_str(&text) {
-            Ok(settings) => (settings, None),
-            Err(error) => {
-                let bad = path.with_extension("json.bad");
-                let kept = match fs::rename(&path, &bad) {
-                    Ok(()) => format!("it is kept as {}", bad.display()),
-                    Err(_) => "it could not be set aside".to_owned(),
-                };
-                let problem = format!("The settings did not load ({error}): {kept}.");
-                (Self::default(), Some(problem))
+    /// Give `assignment.target` the segment in `cell`, in place of the one it
+    /// had there. Other lights in the cell keep theirs. Answers whether the
+    /// cell changed.
+    pub fn set_cell(&mut self, cell: Cell, assignment: Assignment) -> bool {
+        let entries = self.assignments.entry(cell).or_default();
+        match entries.iter_mut().find(|a| a.target == assignment.target) {
+            Some(existing) if *existing == assignment => false,
+            Some(existing) => {
+                *existing = assignment;
+                true
+            }
+            None => {
+                entries.push(assignment);
+                true
             }
         }
     }
 
-    pub fn save(&self) -> io::Result<()> {
-        let path = Self::path();
-        if let Some(dir) = path.parent() {
-            fs::create_dir_all(dir)?;
+    /// Take `target` out of `cell`. Answers whether the cell changed.
+    pub fn clear_cell(&mut self, cell: Cell, target: &str) -> bool {
+        let Some(entries) = self.assignments.get_mut(&cell) else {
+            return false;
+        };
+        let before = entries.len();
+        entries.retain(|a| a.target != target);
+        let changed = entries.len() != before;
+        if entries.is_empty() {
+            self.assignments.remove(&cell);
         }
-        let text = serde_json::to_string_pretty(self).map_err(io::Error::other)?;
-        let temporary = path.with_extension("json.tmp");
-        fs::write(&temporary, text)?;
-        fs::rename(temporary, path)
+        changed
+    }
+
+    /// Take `target` out of every cell.
+    pub fn clear_target(&mut self, target: &str) {
+        for entries in self.assignments.values_mut() {
+            entries.retain(|a| a.target != target);
+        }
+        self.assignments.retain(|_, entries| !entries.is_empty());
+    }
+
+    /// Every assignment, with its cell.
+    pub fn entries(&self) -> impl Iterator<Item = (Cell, &Assignment)> {
+        self.assignments
+            .iter()
+            .flat_map(|(cell, entries)| entries.iter().map(move |a| (*cell, a)))
     }
 
     /// The saved resolution where the light offers it, else the light's
@@ -213,6 +266,27 @@ impl<'de> Deserialize<'de> for Cell {
     }
 }
 
+/// An assignment list per cell, from a list or from the single assignment
+/// that an earlier file holds.
+fn one_or_many<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<Cell, Vec<Assignment>>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Entry {
+        One(Assignment),
+        Many(Vec<Assignment>),
+    }
+    let cells = BTreeMap::<Cell, Entry>::deserialize(deserializer)?;
+    Ok(cells
+        .into_iter()
+        .map(|(cell, entry)| match entry {
+            Entry::One(assignment) => (cell, vec![assignment]),
+            Entry::Many(list) => (cell, list),
+        })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -220,16 +294,34 @@ mod tests {
     #[test]
     fn the_settings_read_back_what_they_wrote() {
         let mut settings = Settings::default();
-        settings.assignments.insert(
-            Cell { row: 2, col: 5 },
-            Assignment {
-                target: "AA:BB".to_owned(),
-                segment: 3,
-            },
-        );
+        settings.set_cell(Cell { row: 2, col: 5 }, Assignment::one("AA:BB", 3));
         let text = serde_json::to_string(&settings).unwrap_or_default();
         assert!(text.contains("\"2:5\""));
         let back: Settings = serde_json::from_str(&text).unwrap_or_default();
         assert_eq!(back, settings);
+    }
+
+    #[test]
+    fn an_earlier_file_with_one_assignment_per_cell_reads_as_a_list_of_one() {
+        let text = r#"{"assignments": {"0:1": {"target": "A", "segment": 4}}}"#;
+        let settings: Settings = serde_json::from_str(text).unwrap_or_default();
+        let cell = Cell { row: 0, col: 1 };
+        assert_eq!(settings.assignments[&cell], vec![Assignment::one("A", 4)]);
+    }
+
+    #[test]
+    fn a_cell_holds_one_segment_per_light_and_any_number_of_lights() {
+        let mut settings = Settings::default();
+        let cell = Cell { row: 0, col: 0 };
+        let to = |target: &str, segment| Assignment::one(target, segment);
+        assert!(settings.set_cell(cell, to("A", 1)));
+        assert!(settings.set_cell(cell, to("B", 7)));
+        assert!(settings.set_cell(cell, to("A", 2)));
+        assert!(!settings.set_cell(cell, to("A", 2)));
+        assert_eq!(settings.assignments[&cell], vec![to("A", 2), to("B", 7)]);
+        assert!(settings.clear_cell(cell, "A"));
+        assert_eq!(settings.assignments[&cell], vec![to("B", 7)]);
+        settings.clear_target("B");
+        assert!(settings.assignments.is_empty());
     }
 }

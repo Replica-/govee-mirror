@@ -46,38 +46,15 @@ pub fn show(
                 let zones = settings.zones(target);
                 ui.label(RichText::new(format!("{} · {zones} segments", target.sku)).weak());
                 changed |= segments(ui, settings, target);
-
-                // A power command ends the segment channel of some models while
-                // it is armed.
-                ui.add_enabled_ui(!status.running, |ui| {
-                    ui.horizontal(|ui| {
-                        if ui.button("On").clicked() {
-                            commands
-                                .push(Command::Control(target.id.clone(), Control::Power(true)));
-                        }
-                        if ui.button("Off").clicked() {
-                            commands
-                                .push(Command::Control(target.id.clone(), Control::Power(false)));
-                        }
-                        let color = controls
-                            .color
-                            .entry(target.id.clone())
-                            .or_insert([255, 255, 255]);
-                        egui::color_picker::color_edit_button_srgb(ui, color);
-                        if ui.button("Set color").clicked() {
-                            commands
-                                .push(Command::Control(target.id.clone(), Control::Color(*color)));
-                        }
-                    });
-                });
-                let [low, high] = target.brightness;
-                let level = controls.brightness.entry(target.id.clone()).or_insert(high);
-                let slider = ui.add(egui::Slider::new(level, low..=high).text("brightness"));
-                if slider.drag_stopped() || (slider.changed() && !slider.dragged()) {
-                    commands.push(Command::Control(
-                        target.id.clone(),
-                        Control::Brightness(*level),
-                    ));
+                if target.razer_port.is_some() {
+                    ui.label(
+                        RichText::new(
+                            "Lights while the mirror runs. The controller's own effect shows otherwise.",
+                        )
+                        .weak(),
+                    );
+                } else {
+                    commands.extend(govee_controls(ui, status, target, controls));
                 }
 
                 if let Some(text) = status.messages.get(&target.id) {
@@ -97,10 +74,81 @@ pub fn show(
         }
         ui.add_space(6.0);
     }
+    if status.razer {
+        changed |= razer_ports(ui, settings);
+    }
     (commands, changed)
 }
 
-fn label(resolution: Resolution, zones: usize) -> String {
+/// The LED count of each port of the Razer ARGB controller. A port with 0 is
+/// not a light. Answers whether the settings changed.
+fn razer_ports(ui: &mut Ui, settings: &mut Settings) -> bool {
+    let mut changed = false;
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        ui.set_width(ui.available_width());
+        ui.label(RichText::new("Razer ARGB controller").strong());
+        ui.label(
+            RichText::new("LEDs on each port, as set in Synapse. 0 leaves the port out.").weak(),
+        );
+        egui::Grid::new("razer-ports")
+            .num_columns(2)
+            .show(ui, |ui| {
+                for (port, leds) in settings.razer_leds.iter_mut().enumerate() {
+                    ui.label(format!("Port {}", port + 1));
+                    changed |= ui
+                        .add(egui::DragValue::new(leds).range(0..=crate::razer::protocol::LEDS))
+                        .changed();
+                    ui.end_row();
+                }
+            });
+    });
+    changed
+}
+
+/// Power, color and brightness of a Govee light.
+fn govee_controls(
+    ui: &mut Ui,
+    status: &Status,
+    target: &Target,
+    controls: &mut Controls,
+) -> Vec<Command> {
+    let mut commands = Vec::new();
+    // A power command ends the segment channel of some models while
+    // it is armed.
+    ui.add_enabled_ui(!status.running, |ui| {
+        ui.horizontal(|ui| {
+            if ui.button("On").clicked() {
+                commands.push(Command::Control(target.id.clone(), Control::Power(true)));
+            }
+            if ui.button("Off").clicked() {
+                commands.push(Command::Control(target.id.clone(), Control::Power(false)));
+            }
+            let color = controls
+                .color
+                .entry(target.id.clone())
+                .or_insert([255, 255, 255]);
+            egui::color_picker::color_edit_button_srgb(ui, color);
+            if ui.button("Set color").clicked() {
+                commands.push(Command::Control(target.id.clone(), Control::Color(*color)));
+            }
+        });
+    });
+    let [low, high] = target.brightness;
+    let level = controls.brightness.entry(target.id.clone()).or_insert(high);
+    let slider = ui.add(egui::Slider::new(level, low..=high).text("brightness"));
+    if slider.drag_stopped() || (slider.changed() && !slider.dragged()) {
+        commands.push(Command::Control(
+            target.id.clone(),
+            Control::Brightness(*level),
+        ));
+    }
+    commands
+}
+
+fn label(target: &Target, resolution: Resolution, zones: usize) -> String {
+    if target.razer_port.is_some() {
+        return format!("One per LED ({zones})");
+    }
     match resolution {
         Resolution::App => format!("As the Govee app ({zones})"),
         Resolution::Full => format!("Every zone the channel renders ({zones})"),
@@ -128,13 +176,17 @@ fn segments(ui: &mut Ui, settings: &mut Settings, target: &Target) -> bool {
 
     ui.add_enabled_ui(manual.is_none(), |ui| {
         egui::ComboBox::from_id_salt(("resolution", &target.id))
-            .selected_text(label(chosen.resolution, target.zones(chosen.resolution)))
+            .selected_text(label(
+                target,
+                chosen.resolution,
+                target.zones(chosen.resolution),
+            ))
             .show_ui(ui, |ui| {
                 for (resolution, zones) in target.options() {
                     ui.selectable_value(
                         &mut chosen.resolution,
                         resolution,
-                        label(resolution, zones),
+                        label(target, resolution, zones),
                     );
                 }
             });
