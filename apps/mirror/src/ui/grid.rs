@@ -16,6 +16,7 @@ pub fn show(
     settings: &mut Settings,
     targets: &[Target],
     preview: Option<&TextureHandle>,
+    animation: Option<&[[u8; 3]]>,
     brush: &Brush,
 ) -> bool {
     let ratio = preview.map_or(16.0 / 9.0, |texture| {
@@ -50,6 +51,16 @@ pub fn show(
             vec2(cw, ch),
         )
     };
+    // The animation stands in for the screen: one color per cell.
+    if let Some(colors) = animation {
+        for (index, [r, g, b]) in colors.iter().enumerate() {
+            let cell = Cell {
+                row: index / grid.cols,
+                col: index % grid.cols,
+            };
+            painter.rect_filled(cell_area(cell), 0.0, Color32::from_rgb(*r, *g, *b));
+        }
+    }
     // Paint before drawing, so that the stroke shows in the same frame.
     let mut changed = false;
     if response.is_pointer_button_down_on()

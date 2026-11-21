@@ -71,6 +71,11 @@ pub struct Settings {
     /// How far each color moves from grey, 1 for none. Averaging a patch of
     /// screen pulls colors toward grey, and this pushes them back.
     pub saturation: f32,
+    /// Mirror rainbow rings moving out from the center, in place of the
+    /// screen.
+    pub animate: bool,
+    /// How many times a second one ring takes the place of the next.
+    pub animation_speed: f32,
 }
 
 impl Default for Settings {
@@ -84,6 +89,8 @@ impl Default for Settings {
             devices: BTreeMap::new(),
             mirror_on_launch: false,
             saturation: 1.3,
+            animate: false,
+            animation_speed: 0.25,
         }
     }
 }

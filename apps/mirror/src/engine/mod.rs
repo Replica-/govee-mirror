@@ -6,11 +6,12 @@
 //! waits on the engine.
 
 mod explain;
+mod status;
 mod targets;
 mod writer;
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use govee_toolkit::{DeviceId, Govee, Mode};
@@ -19,54 +20,14 @@ use tokio::sync::oneshot;
 use tokio::time::{MissedTickBehavior, interval};
 
 use self::explain::explain;
+pub use self::status::{Command, Control, Shared, Status, lock};
 pub use self::targets::Target;
-pub use self::writer::Stats;
 use self::writer::Writer;
 use crate::capture;
-use crate::mapping::{Sources, plan, render};
+use crate::mapping::{Sources, circular, plan, render};
 use crate::settings::Settings;
 
 const HIGHLIGHT: Duration = Duration::from_millis(1500);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Control {
-    Power(bool),
-    Brightness(i64),
-    Color([u8; 3]),
-}
-
-#[derive(Debug, Clone)]
-pub enum Command {
-    Scan,
-    Start,
-    Stop,
-    Control(String, Control),
-    Highlight(String, usize),
-    Settings(Box<Settings>),
-    /// A command must be `Clone` for the window, and a sender is not.
-    Quit(Arc<Mutex<Option<oneshot::Sender<()>>>>),
-}
-
-/// What the window shows.
-#[derive(Debug, Default)]
-pub struct Status {
-    pub targets: Vec<Target>,
-    pub problems: Vec<String>,
-    /// What went wrong at startup. A scan does not clear it.
-    pub warnings: Vec<String>,
-    pub busy: Option<&'static str>,
-    pub running: bool,
-    pub fps: u32,
-    pub stats: HashMap<String, Stats>,
-    /// The last failure of a command, per target.
-    pub messages: HashMap<String, String>,
-}
-
-pub type Shared = Arc<Mutex<Status>>;
-
-pub fn lock(status: &Shared) -> MutexGuard<'_, Status> {
-    status.lock().unwrap_or_else(PoisonError::into_inner)
-}
 
 pub struct Engine {
     commands: UnboundedSender<Command>,
@@ -115,6 +76,8 @@ struct Mirror {
     highlight: Option<(String, usize, Instant)>,
     rendered: u32,
     reported: Instant,
+    /// When the mirror started, the clock of the animation.
+    started: Instant,
 }
 
 struct Context {
@@ -290,6 +253,7 @@ impl Context {
             highlight: None,
             rendered: 0,
             reported: Instant::now(),
+            started: Instant::now(),
         });
         let mut status = lock(&self.status);
         status.busy = None;
@@ -352,9 +316,20 @@ impl Context {
         let Some(mirror) = self.mirror.as_mut() else {
             return;
         };
-        let frame = capture::lock(&self.capture).frame.clone();
-        if let Some(frame) = frame {
-            let cells = frame.cells(self.settings.grid.cols, self.settings.grid.rows);
+        let grid = self.settings.grid;
+        let cells = if self.settings.animate {
+            let seconds = mirror.started.elapsed().as_secs_f32();
+            Some(circular(
+                grid.cols,
+                grid.rows,
+                seconds,
+                self.settings.animation_speed,
+            ))
+        } else {
+            let frame = capture::lock(&self.capture).frame.clone();
+            frame.map(|frame| frame.cells(grid.cols, grid.rows))
+        };
+        if let Some(cells) = cells {
             let mut frames = render(
                 &mirror.plan,
                 &cells,

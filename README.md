@@ -22,6 +22,8 @@ phone controller.
 - Pushes averaged colors back toward full color (**saturation**), and smooths
   them over time (**smoothing**).
 - Blends between segments on the light itself, where you turn it on.
+- Mirrors an animation in place of the screen: rainbow rings that move out
+  from the center.
 - Starts the mirror on launch, and starts with Windows, minimized, when you
   turn those on.
 - Controls each light: power, brightness and color.

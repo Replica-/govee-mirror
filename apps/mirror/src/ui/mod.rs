@@ -10,12 +10,14 @@ use eframe::egui::{self, Color32, ColorImage, RichText, TextureHandle, TextureOp
 
 use crate::capture::{self, Request, Requests};
 use crate::engine::{self, Command, Engine};
-use crate::mapping::square_rows;
+use crate::mapping::{circular, square_rows};
 use crate::settings::Settings;
 use crate::startup;
 
 /// How often the window redraws the preview while nothing else asks it to.
 const PREVIEW: Duration = Duration::from_millis(100);
+/// How often the window redraws while the animation runs.
+const ANIMATION: Duration = Duration::from_millis(33);
 /// How long the settings wait after a change before they go to disk.
 const SAVE_DELAY: Duration = Duration::from_millis(500);
 
@@ -221,6 +223,21 @@ impl eframe::App for App {
                         "Pushes colors away from grey, so that the lights show solid colors",
                     )
                     .changed();
+                changed |= ui
+                    .checkbox(&mut self.settings.animate, "Animated")
+                    .on_hover_text(
+                        "Mirror rainbow rings moving out from the center, in place of the screen",
+                    )
+                    .changed();
+                if self.settings.animate {
+                    changed |= ui
+                        .add(
+                            egui::Slider::new(&mut self.settings.animation_speed, 0.05..=2.0)
+                                .logarithmic(true)
+                                .text("speed"),
+                        )
+                        .changed();
+                }
                 ui.separator();
                 changed |= ui
                     .checkbox(&mut self.settings.mirror_on_launch, "Mirror on launch")
@@ -289,12 +306,18 @@ impl eframe::App for App {
                 });
             });
 
+        let animation = self.settings.animate.then(|| {
+            let seconds = ctx.input(|i| i.time) as f32;
+            let grid = self.settings.grid;
+            circular(grid.cols, grid.rows, seconds, self.settings.animation_speed)
+        });
         egui::CentralPanel::default().show(ui, |ui| {
             changed |= grid::show(
                 ui,
                 &mut self.settings,
                 &status.targets,
                 self.preview.as_ref(),
+                animation.as_deref(),
                 &self.brush,
             );
         });
@@ -312,7 +335,12 @@ impl eframe::App for App {
         if self.unsaved.is_some_and(|at| at.elapsed() >= SAVE_DELAY) {
             self.save();
         }
-        ctx.request_repaint_after(PREVIEW);
+        // The rings move on every frame; the screen preview needs fewer.
+        ctx.request_repaint_after(if self.settings.animate {
+            ANIMATION
+        } else {
+            PREVIEW
+        });
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
