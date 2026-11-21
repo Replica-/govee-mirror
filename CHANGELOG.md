@@ -23,6 +23,15 @@ build time and ships it, so a release pins the date below. `catalog.json` is
 the generated artifact, and it carries the schema revision that it was built
 at.
 
+### 2026-11-21
+
+#### Added
+
+- `H61F2`, Strip Light 2 Pro: the segment channel over `lan`, up to 20 zones,
+  measured on one unit. A frame of 21 zones or more leaves the strip dark.
+- `H6056`, RGBICWW Light Bars: the segment channel over `lan`, up to 12
+  zones, 6 per bar, measured on one unit.
+
 ### 2026-11-19
 
 #### Added

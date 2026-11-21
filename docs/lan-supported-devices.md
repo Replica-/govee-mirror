@@ -114,7 +114,7 @@ model in.
 | `H6048` | Govee RGBIC Gaming Light Bars Pro | Table Lamps | listed, not verified |
 | `H6051` | Govee Table Lamp Lite | Table Lamps | listed, not verified |
 | `H6052` | Govee RGBICWW Table Lamp | Table Lamps | listed, not verified |
-| `H6056` | Govee RGBICWW Light Bars | Table Lamps | listed, not verified |
+| `H6056` | Govee RGBICWW Light Bars | Table Lamps | [`H6056`](../devices/H6056.yaml) |
 | `H6059` | Govee Night Light Mini | Discontinued | listed, not verified |
 | `H6061` | Govee Glide Hexa Light Panels | Wall Lights | listed, not verified |
 | `H6062` | Govee Glide Wall Light | Wall Lights | listed, not verified |
@@ -202,7 +202,7 @@ model in.
 | `H61D6` | 10m Govee Neon Rope Light 2 | Neon Rope Light | listed, not verified |
 | `H61E0` | Govee LED Strip Light M1 | RGBIC Strip Lights | listed, not verified |
 | `H61E1` | Govee LED Strip Light M1 | RGBIC Strip Lights | listed, not verified |
-| `H61F2` | Govee Strip Light 2 Pro | RGBIC Strip Lights | listed, not verified |
+| `H61F2` | Govee Strip Light 2 Pro | RGBIC Strip Lights | [`H61F2`](../devices/H61F2.yaml) |
 | `H61F5` | Govee Strip Light 2 Pro | RGBIC Strip Lights | listed, not verified |
 | `H61F6` | Govee Strip Light 2 Pro | RGBIC Strip Lights | listed, not verified |
 | `H6350` | Sphere Net Lights | Holiday Lights | listed, not verified |

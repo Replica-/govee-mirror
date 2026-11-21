@@ -1,0 +1,76 @@
+# On Govee's official LAN-control list — see ../docs/lan-supported-devices.md.
+
+schema_version: 1
+
+sku: "H61F2"
+family: "rgbic-strip"
+name: "Strip Light 2 Pro"
+aliases: []
+include:
+  - lan-documented
+  - lan-razer
+  - cloud-openapi
+
+candidate_aliases: []
+
+capabilities:
+  power:
+  brightness:  { range: [1, 100] }
+  color:
+  segments:
+    count: 10             # zones the phone controller exposes
+
+modes:
+  lan:
+    support: full
+    capabilities: [power, brightness, color, segments]
+    unreachable: {}
+    notes: >-
+      Requires LAN Control enabled in the Govee Home app. The segment channel
+      of docs/protocol/lan.md 2.3 paints, up to 20 zones: twice the 10 the
+      phone controller exposes. Nobody probed the white temperature.
+  cloud:
+    support: unknown
+    capabilities: [power, brightness, color]
+    unreachable: {}
+    notes: >-
+      The documented HTTPS API. The API answers with an error for a
+      capability the model does not carry. Nobody probed this model.
+
+overrides:
+  lan:
+    colortemp: { drop: true }
+    raw_status: { drop: true }
+    segment_color:
+      args:
+        nb_seg: { range: [1, 20] }
+        colors: { max_len: 20 }
+      notes_append: >-
+        The ceiling of 20 zones is this unit's: a frame of 21 zones or more
+        leaves the whole strip dark. See `verified:`.
+  cloud:
+    colortemp: { drop: true }
+
+measurements:
+  segment_max_zones: 20     # the highest nbSeg this firmware renders. 21 and
+                            # above leave the strip dark and report nothing
+  zone_0_end: "?"           # zone 0 is at one end and the last zone at the
+                            # other; which end has the power lead is not noted
+
+verified:
+  by: "Replica-"
+  firmware: "?"
+  date: "2026-11-21"
+  notes: >-
+    lan mode exercised over UDP on one unit, through the Rust CLI, by eye.
+    The unit answers the multicast discovery. Power, brightness and color
+    were sent and applied.
+
+    The segment channel paints. 1, 4, 10, 12 and 20 zones each render. 20
+    zones alternating white and red render as 10 white and 10 red blocks of
+    one length, so every zone up to 20 is distinct. 21, 22, 25 and 30 zones
+    each leave the whole strip dark, with no answer. Zone 0 renders at one
+    end and the last zone at the other.
+
+    Not exercised: the white temperature, the native LED count, the frame
+    rate, the arm settle time, ble and cloud.

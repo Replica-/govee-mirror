@@ -83,8 +83,10 @@ such in the device file until someone verifies them.
 | --- | ------ | ---- | ----- | ----- | ------- | -------- |
 | [H6008](../devices/H6008.yaml) | rgbww-bulb | Smart LED Bulb RGBWW | full | full | full | ✅ 2026-09-22 |
 | [H6022](../devices/H6022.yaml) | rgbic-table-lamp | Table Lamp 2 | capped | full | capped | ✅ 2026-09-22 |
+| [H6056](../devices/H6056.yaml) | rgbic-light-bars | RGBICWW Light Bars | full | ? | ? | ✅ 2026-11-21 |
 | [H6114](../devices/H6114.yaml) | rgb-car-strip | RGB Car LED Strip Lights | none | full | none | ✅ 2026-09-07 |
 | [H61A0](../devices/H61A0.yaml) | rgbic-neon-rope | 3m RGBIC LED Neon Rope Lights | capped | full | full | ✅ 2026-09-22 |
+| [H61F2](../devices/H61F2.yaml) | rgbic-strip | Strip Light 2 Pro | full | ? | ? | ✅ 2026-11-21 |
 <!-- /generated -->
 
 ## Capabilities by SKU
@@ -94,8 +96,10 @@ such in the device file until someone verifies them.
 | --- | ---------- | ----- | --------- | ----- | ----- | ------------------ | -------- |
 | H6008 | ✅ | ✅ | ✅ | — | ✅ | — | — |
 | H6022 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| H6056 | ✅ | ✅ | — | — | ✅ | — | ✅ |
 | H6114 | ✅ | ✅ | — | ✅ | ✅ | — | — |
 | H61A0 | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| H61F2 | ✅ | ✅ | — | — | ✅ | — | ✅ |
 <!-- /generated -->
 
 Capabilities are hardware facts; what is reachable depends on the active mode.

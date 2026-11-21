@@ -1,0 +1,85 @@
+{
+  "description": "Conformance vectors for H61F2 over lan. Every SDK — the Rust core, its bindings and any hand-written port — must produce exactly these bytes for these arguments. See ../README.md.",
+  "sku": "H61F2",
+  "mode": "lan",
+  "vectors": [
+    {
+      "name": "power on",
+      "command": "power",
+      "args": { "on": 1 },
+      "message": { "msg": { "cmd": "turn", "data": { "value": 1 } } },
+      "source": "docs/protocol/lan.md 1, documented"
+    },
+    {
+      "name": "power off",
+      "command": "power",
+      "args": { "on": 0 },
+      "message": { "msg": { "cmd": "turn", "data": { "value": 0 } } },
+      "source": "docs/protocol/lan.md 1, documented"
+    },
+    {
+      "name": "brightness 50%",
+      "command": "brightness",
+      "args": { "level": 50 },
+      "message": { "msg": { "cmd": "brightness", "data": { "value": 50 } } },
+      "source": "docs/protocol/lan.md 1, documented"
+    },
+    {
+      "name": "colour red",
+      "command": "color",
+      "args": { "r": 255, "g": 0, "b": 0 },
+      "message": {
+        "msg": {
+          "cmd": "colorwc",
+          "data": { "color": { "r": 255, "g": 0, "b": 0 }, "colorTemInKelvin": 0 }
+        }
+      },
+      "source": "docs/protocol/lan.md 1, documented"
+    },
+    {
+      "name": "status request",
+      "command": "status",
+      "args": {},
+      "message": { "msg": { "cmd": "devStatus", "data": {} } },
+      "source": "docs/protocol/lan.md 1, documented"
+    },
+    {
+      "name": "arm the segment channel",
+      "command": "dreamview_enable",
+      "args": { "on": 1 },
+      "frame_hex": "bb0001b1010a",
+      "message": { "msg": { "cmd": "razer", "data": { "pt": "uwABsQEK" } } },
+      "source": "derived from the frame layout in docs/protocol/lan.md 2.3, not captured"
+    },
+    {
+      "name": "disarm the segment channel",
+      "command": "dreamview_enable",
+      "args": { "on": 0 },
+      "frame_hex": "bb0001b1000b",
+      "message": { "msg": { "cmd": "razer", "data": { "pt": "uwABsQAL" } } },
+      "source": "derived from the frame layout in docs/protocol/lan.md 2.3, not captured"
+    },
+    {
+      "name": "two hard-edged zones, red then green",
+      "command": "segment_color",
+      "args": { "gradient": 0, "colors": [[255, 0, 0], [0, 255, 0]] },
+      "frame_hex": "bb0008b00002ff000000ff0001",
+      "message": { "msg": { "cmd": "razer", "data": { "pt": "uwAIsAAC/wAAAP8AAQ==" } } },
+      "source": "derived from the frame layout in docs/protocol/lan.md 2.3, not captured"
+    }
+  ],
+  "errors": [
+    {
+      "name": "brightness 0 is rejected, never clamped to 1",
+      "command": "brightness",
+      "args": { "level": 0 },
+      "code": "out_of_range"
+    },
+    {
+      "name": "the white temperature is not carried",
+      "command": "colortemp",
+      "args": { "kelvin": 4000 },
+      "code": "unknown_command"
+    }
+  ]
+}

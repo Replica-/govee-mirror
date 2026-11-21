@@ -1,0 +1,80 @@
+# On Govee's official LAN-control list — see ../docs/lan-supported-devices.md.
+
+schema_version: 1
+
+sku: "H6056"
+family: "rgbic-light-bars"
+name: "RGBICWW Light Bars"
+aliases: []
+include:
+  - lan-documented
+  - lan-razer
+  - cloud-openapi
+
+candidate_aliases: []
+
+capabilities:
+  power:
+  brightness:  { range: [1, 100] }
+  color:
+  segments:
+    count: 6              # zones the phone controller exposes, 3 per bar
+
+modes:
+  lan:
+    support: full
+    capabilities: [power, brightness, color, segments]
+    unreachable: {}
+    notes: >-
+      Requires LAN Control enabled in the Govee Home app. Two bars on one
+      controller. The segment channel of docs/protocol/lan.md 2.3 paints, up
+      to 12 zones: 6 per bar, twice the 6 in all that the phone controller
+      exposes. Nobody probed the white temperature.
+  cloud:
+    support: unknown
+    capabilities: [power, brightness, color]
+    unreachable: {}
+    notes: >-
+      The documented HTTPS API. The API answers with an error for a
+      capability the model does not carry. Nobody probed this model.
+
+overrides:
+  lan:
+    colortemp: { drop: true }
+    raw_status: { drop: true }
+    segment_color:
+      args:
+        nb_seg: { range: [1, 12] }
+        colors: { max_len: 12 }
+      notes_append: >-
+        The ceiling of 12 zones is this unit's: in a frame of more zones,
+        no zone past the 12th lights. See `verified:`.
+  cloud:
+    colortemp: { drop: true }
+
+measurements:
+  segment_max_zones: 12     # the highest nbSeg whose last zone renders
+  segment_chain: "bars"     # the first half of the zones starts at the bottom
+                            # of the left bar, the second half climbs the
+                            # right bar from the bottom
+
+verified:
+  by: "Replica-"
+  firmware: "?"
+  date: "2026-11-21"
+  notes: >-
+    lan mode exercised over UDP on one unit, through the Rust CLI, by eye.
+    The unit answers the multicast discovery. Power, brightness and color
+    were sent and applied.
+
+    The segment channel paints. At 6 zones, 3 render on each bar. Zone 0
+    alone lights the bottom of the left bar, and zone 3 alone the bottom of
+    the right bar. The right bar reads zones 5, 4 and 3 from the top. The
+    order up the left bar was not read cleanly. 12 zones alternating white and red
+    render as 6 blocks on each bar. The last zone of a 12-zone frame lights
+    the top of the right bar. The last zone of a 13, 14, 16 or 20-zone frame
+    lights nothing. A 30-zone rainbow lit both bars with only its first hues,
+    red to yellow: the firmware does not refuse a wider frame.
+
+    Not exercised: the white temperature, the native LED count, the frame
+    rate, the arm settle time, ble and cloud.

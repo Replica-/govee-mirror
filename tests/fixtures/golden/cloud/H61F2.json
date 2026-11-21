@@ -1,0 +1,50 @@
+{
+  "description": "Conformance vectors for H61F2 over cloud. Every SDK — the Rust core, its bindings and any hand-written port — must produce exactly these bodies for these arguments. See ../README.md.",
+  "sku": "H61F2",
+  "mode": "cloud",
+  "vectors": [
+    {
+      "name": "power on",
+      "command": "power",
+      "args": { "on": 1 },
+      "message": {
+        "capability": { "type": "devices.capabilities.on_off", "instance": "powerSwitch", "value": 1 }
+      },
+      "source": "the documented HTTPS API, not sent to this model"
+    },
+    {
+      "name": "power off",
+      "command": "power",
+      "args": { "on": 0 },
+      "message": {
+        "capability": { "type": "devices.capabilities.on_off", "instance": "powerSwitch", "value": 0 }
+      },
+      "source": "the documented HTTPS API, not sent to this model"
+    },
+    {
+      "name": "brightness 50%",
+      "command": "brightness",
+      "args": { "level": 50 },
+      "message": {
+        "capability": { "type": "devices.capabilities.range", "instance": "brightness", "value": 50 }
+      },
+      "source": "the documented HTTPS API, not sent to this model"
+    },
+    {
+      "name": "colour red, packed into one integer",
+      "command": "color",
+      "args": { "r": 255, "g": 0, "b": 0 },
+      "message": {
+        "capability": { "type": "devices.capabilities.color_setting", "instance": "colorRgb", "value": 16711680 }
+      },
+      "source": "the documented HTTPS API, not sent to this model"
+    },
+    {
+      "name": "status request",
+      "command": "status",
+      "args": {},
+      "reads": { "brightness": "level", "colorRgb": "color", "colorTemperatureK": "kelvin", "powerSwitch": "on" },
+      "source": "the documented HTTPS API, not sent to this model"
+    }
+  ]
+}
