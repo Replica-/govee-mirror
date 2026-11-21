@@ -366,9 +366,10 @@ jobs:
       - name: Breaking change declared since the last release
         id: declared
         run: |
-          # A fork that carries no rust-v* tag has no range to read: the
-          # semver check below then allows no break.
-          last=$(git describe --tags --match 'rust-v*' --abbrev=0) || exit 0
+          # A fork carries no rust-v* tag. There the range starts at the last
+          # commit that changed the version line, which a release bumps.
+          last=$(git describe --tags --match 'rust-v*' --abbrev=0 2>/dev/null) ||
+            last=$(git log -1 --format=%H -G '^version *=' -- packages/rust/Cargo.toml)
           if git log --format='%s%n%b' "$last..HEAD" -- packages/rust \
             | grep -qE '^[a-z]+(\([a-z0-9-]+\))?!: |^BREAKING[ -]CHANGE: '; then
             echo "release-type=major" >> "$GITHUB_OUTPUT"
