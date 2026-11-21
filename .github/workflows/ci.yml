@@ -366,7 +366,9 @@ jobs:
       - name: Breaking change declared since the last release
         id: declared
         run: |
-          last=$(git describe --tags --match 'rust-v*' --abbrev=0)
+          # A fork that carries no rust-v* tag has no range to read: the
+          # semver check below then allows no break.
+          last=$(git describe --tags --match 'rust-v*' --abbrev=0) || exit 0
           if git log --format='%s%n%b' "$last..HEAD" -- packages/rust \
             | grep -qE '^[a-z]+(\([a-z0-9-]+\))?!: |^BREAKING[ -]CHANGE: '; then
             echo "release-type=major" >> "$GITHUB_OUTPUT"
