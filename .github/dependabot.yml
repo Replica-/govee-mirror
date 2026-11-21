@@ -74,15 +74,6 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: npm
-    directory: /apps/desktop
-    patterns: ["*"]
-    multi-ecosystem-group: dependencies
-    groups:
-      security:
-        applies-to: security-updates
-        patterns: ["*"]
-
-  - package-ecosystem: npm
     directory: /apps/playground/server
     patterns: ["*"]
     multi-ecosystem-group: dependencies

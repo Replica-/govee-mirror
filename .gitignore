@@ -17,10 +17,6 @@ build/
 *.egg-info/
 .pytest_cache/
 
-# Electron
-out/
-release/
-
 # Cache runtime (discovery)
 .cache/
 *.local

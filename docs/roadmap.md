@@ -9,7 +9,7 @@ ask for. Open an issue if something matters to you.
 | # | Milestone | Status |
 | - | --------- | ------ |
 | 1 | Playground — backend, web UI, raw payload field | 🔜 Next |
-| 2 | Electron app around the playground | 🔜 Planned |
+| 2 | Screen mirror — native app, Govee `lan` and Razer over USB | 🚧 In progress |
 | 3 | Matter bridge — one integration, every controller | 🔜 Planned |
 | 4 | Home Assistant custom component (LAN power + brightness first) | 🔜 Planned |
 | 5 | Homebridge plugin | 🔜 Planned |

@@ -1,0 +1,46 @@
+[package]
+name = "govee-mirror"
+description = "Mirror the screen onto Govee lights over the LAN: a grid over the screen, one cell to one segment. Unofficial."
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT"
+repository = "https://github.com/damient/govee-toolkit"
+authors = ["damient"]
+publish = false
+
+# A workspace of its own: the window and the screen capture stay out of the
+# build and the CI of `packages/rust`.
+[workspace]
+
+[[bin]]
+name = "govee-mirror"
+path = "src/main.rs"
+
+[dependencies]
+eframe = { version = "0.37", default-features = false, features = [
+  "default_fonts",
+  "glow",
+] }
+govee-toolkit = { path = "../../packages/rust", default-features = false, features = ["lan"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
+
+[target.'cfg(windows)'.dependencies]
+# The start-with-Windows entry, through a safe API.
+winreg = "0.56"
+windows = { version = "0.62", features = [
+  "Win32_Foundation",
+  "Win32_Graphics_Direct3D",
+  "Win32_Graphics_Direct3D11",
+  "Win32_Graphics_Dxgi",
+  "Win32_Graphics_Dxgi_Common",
+  # `DXGI_OUTPUT_DESC` carries an `HMONITOR`.
+  "Win32_Graphics_Gdi",
+] }
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true

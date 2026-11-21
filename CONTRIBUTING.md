@@ -136,7 +136,7 @@ Full text: <https://developercertificate.org/>.
 | `docs/` | Mode model (`modes.md`), architecture and per-protocol documentation |
 | `packages/rust/` | The protocol core, and the reference implementation |
 | `packages/` | SDKs (python, node) plus the DMX bridge |
-| `apps/` | Web playground and Electron app (not published) |
+| `apps/` | Web playground and the screen mirror app (not published) |
 | `integrations/` | Matter bridge, Home Assistant, Homebridge |
 | `tools/` | Local CI mirror and pointers to the development tools |
 | `tests/fixtures/` | Real UDP / BLE captures per SKU, and the conformance vectors |
