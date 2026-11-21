@@ -23,5 +23,6 @@ that carries `govee-mirror.exe`. The policy is
   per-light switch that blends between segments on the light.
 - A settings file that does not parse is moved to `mirror.json.bad` rather
   than overwritten, and a crash writes `mirror-crash.log`.
-- An animated mode: rainbow rings move out from the center of the grid, and
-  the lights mirror them in place of the screen.
+- Patterns that the lights mirror in place of the screen: rainbow rings, a
+  color wheel of 12 solid wedges, and a spiral of the same wedges. Each one
+  moves or holds still.

@@ -110,37 +110,6 @@ pub fn saturate(color: [f32; 3], factor: f32) -> [f32; 3] {
     color.map(|c| (top + (c - top) * factor).clamp(0.0, 255.0))
 }
 
-/// Rainbow rings around the center of the grid, moving outward: one color per
-/// cell, row by row. `seconds` is the time since the animation started, and
-/// `speed` is how many times a second one ring takes the place of the next.
-pub fn circular(cols: usize, rows: usize, seconds: f32, speed: f32) -> Vec<[u8; 3]> {
-    // Two full rainbows from the center to a corner.
-    const RINGS: f32 = 2.0;
-    #[allow(clippy::cast_precision_loss)]
-    let (cx, cy) = (cols as f32 / 2.0, rows as f32 / 2.0);
-    let corner = cx.hypot(cy).max(f32::EPSILON);
-    (0..rows)
-        .flat_map(|row| (0..cols).map(move |col| (row, col)))
-        .map(|(row, col)| {
-            #[allow(clippy::cast_precision_loss)]
-            let distance = (col as f32 + 0.5 - cx).hypot(row as f32 + 0.5 - cy) / corner;
-            hue((distance * RINGS - seconds * speed).rem_euclid(1.0))
-        })
-        .collect()
-}
-
-/// A fully saturated color at `hue`, from 0 to 1.
-fn hue(hue: f32) -> [u8; 3] {
-    let channel = |offset: f32| {
-        let k = (hue * 6.0 + offset).rem_euclid(6.0);
-        let value = 1.0 - (k.min(4.0 - k).clamp(0.0, 1.0));
-        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-        let byte = (value * 255.0).round() as u8;
-        byte
-    };
-    [channel(5.0), channel(3.0), channel(1.0)]
-}
-
 /// The row count that makes the cells of `cols` columns square on a screen
 /// of `ratio`, width over height. Square to a pixel where the height does not
 /// divide.
@@ -207,18 +176,6 @@ mod tests {
         assert_eq!(saturate([200.0, 150.0, 100.0], 1.0), [200.0, 150.0, 100.0]);
         assert_eq!(saturate([200.0, 150.0, 100.0], 2.0), [200.0, 100.0, 0.0]);
         assert_eq!(saturate([120.0, 120.0, 120.0], 2.0), [120.0, 120.0, 120.0]);
-    }
-
-    #[test]
-    fn the_rings_start_red_at_the_center_and_move_outward() {
-        assert_eq!(hue(0.0), [255, 0, 0]);
-        assert_eq!(hue(1.0 / 3.0), [0, 255, 0]);
-        assert_eq!(hue(2.0 / 3.0), [0, 0, 255]);
-        let still = circular(2, 2, 0.0, 1.0);
-        assert_eq!(still.len(), 4);
-        // The four cells sit at the same distance from the center.
-        assert!(still.iter().all(|c| *c == still[0]));
-        assert_ne!(circular(2, 2, 0.25, 1.0)[0], still[0]);
     }
 
     #[test]

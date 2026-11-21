@@ -9,6 +9,7 @@ use std::{env, fs, io};
 use serde::{Deserialize, Serialize};
 
 use crate::engine::Target;
+use crate::pattern::Source;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Grid {
@@ -71,10 +72,12 @@ pub struct Settings {
     /// How far each color moves from grey, 1 for none. Averaging a patch of
     /// screen pulls colors toward grey, and this pushes them back.
     pub saturation: f32,
-    /// Mirror rainbow rings moving out from the center, in place of the
-    /// screen.
-    pub animate: bool,
-    /// How many times a second one ring takes the place of the next.
+    /// What the mirror samples: the screen, or a pattern.
+    pub source: Source,
+    /// Whether a pattern moves. A still pattern holds its first frame.
+    pub moving: bool,
+    /// How many times a second one ring or one wedge of a pattern takes the
+    /// place of the next.
     pub animation_speed: f32,
 }
 
@@ -89,7 +92,8 @@ impl Default for Settings {
             devices: BTreeMap::new(),
             mirror_on_launch: false,
             saturation: 1.3,
-            animate: false,
+            source: Source::Screen,
+            moving: true,
             animation_speed: 0.25,
         }
     }

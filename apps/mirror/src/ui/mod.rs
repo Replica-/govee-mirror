@@ -10,7 +10,8 @@ use eframe::egui::{self, Color32, ColorImage, RichText, TextureHandle, TextureOp
 
 use crate::capture::{self, Request, Requests};
 use crate::engine::{self, Command, Engine};
-use crate::mapping::{circular, square_rows};
+use crate::mapping::square_rows;
+use crate::pattern::{self, Source};
 use crate::settings::Settings;
 use crate::startup;
 
@@ -223,13 +224,22 @@ impl eframe::App for App {
                         "Pushes colors away from grey, so that the lights show solid colors",
                     )
                     .changed();
-                changed |= ui
-                    .checkbox(&mut self.settings.animate, "Animated")
-                    .on_hover_text(
-                        "Mirror rainbow rings moving out from the center, in place of the screen",
-                    )
-                    .changed();
-                if self.settings.animate {
+                ui.separator();
+                egui::ComboBox::from_id_salt("source")
+                    .selected_text(self.settings.source.label())
+                    .show_ui(ui, |ui| {
+                        for source in Source::ALL {
+                            changed |= ui
+                                .selectable_value(&mut self.settings.source, source, source.label())
+                                .changed();
+                        }
+                    })
+                    .response
+                    .on_hover_text("What the lights mirror: the screen, or a pattern");
+                if self.settings.source != Source::Screen {
+                    changed |= ui.checkbox(&mut self.settings.moving, "Moving").changed();
+                }
+                if self.settings.source != Source::Screen && self.settings.moving {
                     changed |= ui
                         .add(
                             egui::Slider::new(&mut self.settings.animation_speed, 0.05..=2.0)
@@ -306,11 +316,20 @@ impl eframe::App for App {
                 });
             });
 
-        let animation = self.settings.animate.then(|| {
-            let seconds = ctx.input(|i| i.time) as f32;
-            let grid = self.settings.grid;
-            circular(grid.cols, grid.rows, seconds, self.settings.animation_speed)
-        });
+        let seconds = if self.settings.moving {
+            ctx.input(|i| i.time) as f32
+        } else {
+            0.0
+        };
+        let grid = self.settings.grid;
+        let animation = pattern::draw(
+            self.settings.source,
+            grid.cols,
+            grid.rows,
+            seconds,
+            self.settings.animation_speed,
+        );
+        let moving = animation.is_some() && self.settings.moving;
         egui::CentralPanel::default().show(ui, |ui| {
             changed |= grid::show(
                 ui,
@@ -335,12 +354,9 @@ impl eframe::App for App {
         if self.unsaved.is_some_and(|at| at.elapsed() >= SAVE_DELAY) {
             self.save();
         }
-        // The rings move on every frame; the screen preview needs fewer.
-        ctx.request_repaint_after(if self.settings.animate {
-            ANIMATION
-        } else {
-            PREVIEW
-        });
+        // A moving pattern changes on every frame; the screen preview needs
+        // fewer.
+        ctx.request_repaint_after(if moving { ANIMATION } else { PREVIEW });
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {

@@ -58,7 +58,8 @@ segment that no cell feeds: it stays dark while the mirror runs.
 | fps | Top bar | How often the screen is sampled. Each light sends at the rate its device file measured, and only the newest frame goes out. |
 | Smoothing | Top bar | The share of the previous frame that stays, from 0 to 0.95. Higher is calmer and slower. |
 | Saturation | Top bar | How far each color moves away from grey, from 1 to 2. Averaging a patch of screen pulls colors toward grey, and this gives solid colors back. 1.3 by default. |
-| Animated | Top bar | Mirrors rainbow rings that move out from the center of the grid, in place of the screen. Each cell feeds its segment as it does from the screen. **Speed** sets how fast the rings move. |
+| Source | Top bar | What the lights mirror: the **Screen**, or a pattern drawn on the grid. **Rings** are rainbow rings around the center. **Color wheel** is 12 solid wedges, clockwise from yellow-green at 12 o'clock. **Spiral** twists those wedges half a turn from the center to a corner. Each cell feeds its segment as it does from the screen. |
+| Moving | Top bar | Whether a pattern moves: the rings move outward, and the wheel and the spiral turn clockwise. **Speed** sets how many rings or wedges pass in a second. A pattern that does not move holds still on the lights. |
 | Mirror on launch | Top bar | Starts the mirror once the first scan finds the lights. |
 | Start with Windows | Top bar | Starts the app minimized when you sign in. Clear it to remove the entry. |
 | Resolution | Each light | The segment count: as the Govee app shows it, every zone the segment channel renders, or one per LED where the device file measured that. The finest is the default. |

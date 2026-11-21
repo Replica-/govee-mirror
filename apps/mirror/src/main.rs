@@ -5,6 +5,7 @@
 mod capture;
 mod engine;
 mod mapping;
+mod pattern;
 mod settings;
 mod startup;
 mod ui;

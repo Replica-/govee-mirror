@@ -24,7 +24,8 @@ pub use self::status::{Command, Control, Shared, Status, lock};
 pub use self::targets::Target;
 use self::writer::Writer;
 use crate::capture;
-use crate::mapping::{Sources, circular, plan, render};
+use crate::mapping::{Sources, plan, render};
+use crate::pattern;
 use crate::settings::Settings;
 
 const HIGHLIGHT: Duration = Duration::from_millis(1500);
@@ -317,18 +318,16 @@ impl Context {
             return;
         };
         let grid = self.settings.grid;
-        let cells = if self.settings.animate {
-            let seconds = mirror.started.elapsed().as_secs_f32();
-            Some(circular(
-                grid.cols,
-                grid.rows,
-                seconds,
-                self.settings.animation_speed,
-            ))
+        let seconds = if self.settings.moving {
+            mirror.started.elapsed().as_secs_f32()
         } else {
+            0.0
+        };
+        let (source, speed) = (self.settings.source, self.settings.animation_speed);
+        let cells = pattern::draw(source, grid.cols, grid.rows, seconds, speed).or_else(|| {
             let frame = capture::lock(&self.capture).frame.clone();
             frame.map(|frame| frame.cells(grid.cols, grid.rows))
-        };
+        });
         if let Some(cells) = cells {
             let mut frames = render(
                 &mirror.plan,
