@@ -24,8 +24,10 @@ is never truncated to fit.
 | --- | ---- | ------ | --------- | ------- |
 | [H6008](../devices/H6008.yaml) | Smart LED Bulb RGBWW | 6 | — | — |
 | [H6022](../devices/H6022.yaml) | Table Lamp 2 | 6 | 48 | 399 |
+| [H6056](../devices/H6056.yaml) | RGBICWW Light Bars | 6 | 21 | — |
 | [H6114](../devices/H6114.yaml) | RGB Car LED Strip Lights | — | — | — |
 | [H61A0](../devices/H61A0.yaml) | 3m RGBIC LED Neon Rope Lights | 6 | 48 | 129 |
+| [H61F2](../devices/H61F2.yaml) | Strip Light 2 Pro | 6 | 33 | — |
 <!-- /generated -->
 
 Channels 1 to 3 are the same on every personality and every model.
@@ -53,8 +55,10 @@ know it before the show.
 | --- | ------ | ------------ | ----------------- | ----------- |
 | H6008 | 1 to 100 | 100 | 2700 to 6500 | 255 |
 | H6022 | 0 to 100 | 101 | 2700 to 6500 | 255 |
+| H6056 | 1 to 100 | 100 | — | — |
 | H6114 | — | — | — | — |
 | H61A0 | 1 to 100 | 100 | 2000 to 9000 | 255 |
+| H61F2 | 1 to 100 | 100 | — | — |
 <!-- /generated -->
 
 Red, green and blue scale into the pair the `lan` color command declares for
