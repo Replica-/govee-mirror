@@ -5,31 +5,9 @@ name: Website
 # the device files. The LAN Control page reads docs/lan-supported-devices.json,
 # and the reference page reads the signatures that `xtask api` extracts.
 
+# This fork publishes no site: the workflow runs only when started by hand
+# from the Actions tab.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "site/**"
-      - "devices/**"
-      - "docs/lan-supported-devices.json"
-      - "packages/rust/src/**"
-      - "packages/rust/crates/*/args.json"
-      - "packages/node/binding.d.cts"
-      - "packages/python/govee_toolkit/_govee_toolkit.pyi"
-      - ".github/workflows/pages.yml"
-  # A draft pull request does not build the site: the build job is gated on
-  # draft == false, and ready_for_review is what starts it.
-  pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
-    paths:
-      - "site/**"
-      - "devices/**"
-      - "docs/lan-supported-devices.json"
-      - "packages/rust/src/**"
-      - "packages/rust/crates/*/args.json"
-      - "packages/node/binding.d.cts"
-      - "packages/python/govee_toolkit/_govee_toolkit.pyi"
-      - ".github/workflows/pages.yml"
   workflow_dispatch:
 
 permissions:
