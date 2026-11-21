@@ -6,6 +6,7 @@
 #   tools/release-notes.sh cli cli-v0.1.0
 #   tools/release-notes.sh dmx dmx-v0.1.0
 #   tools/release-notes.sh mcp mcp-v0.1.0
+#   tools/release-notes.sh mirror mirror-v0.1.0
 #
 # The tag, the version in the manifest and the changelog heading carry the same
 # number. A tag pushed past a manifest nobody bumped would otherwise publish a
@@ -15,7 +16,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: ${0##*/} <rust|cli|dmx|python|node|mcp> <tag>" >&2
+  echo "usage: ${0##*/} <rust|cli|dmx|python|node|mcp|mirror> <tag>" >&2
   exit 2
 }
 
@@ -33,6 +34,7 @@ dmx) subdir=packages/rust/crates/dmx file=Cargo.toml ;;
 python) subdir=packages/python file=pyproject.toml ;;
 node) subdir=packages/node file=package.json pattern='.*"version" *: *"\([^"]*\)".*' ;;
 mcp) subdir=integrations/mcp file=package.json pattern='.*"version" *: *"\([^"]*\)".*' ;;
+mirror) subdir=apps/mirror file=Cargo.toml ;;
 *) usage ;;
 esac
 

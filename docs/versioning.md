@@ -12,9 +12,10 @@ Each package keeps its own —
 [`python`](../packages/python/CHANGELOG.md),
 [`node`](../packages/node/CHANGELOG.md),
 [`dmx`](../packages/rust/crates/dmx/CHANGELOG.md),
-[`mcp`](../integrations/mcp/CHANGELOG.md). The root
+[`mcp`](../integrations/mcp/CHANGELOG.md),
+[`mirror`](../apps/mirror/CHANGELOG.md). The root
 [`CHANGELOG.md`](../CHANGELOG.md) carries what belongs to no package — the
-device catalog, the documentation, the tooling and CI — and indexes the six.
+device catalog, the documentation, the tooling and CI — and indexes the seven.
 
 ## Semver, and what pre-1.0 means
 
@@ -45,6 +46,7 @@ have survived `ble` and `cloud` landing — not on a date.
 | `python-vX.Y.Z` | `govee-toolkit` | PyPI |
 | `node-vX.Y.Z` | `govee-toolkit` | npm |
 | `mcp-vX.Y.Z` | `govee-toolkit-mcp` | npm |
+| `mirror-vX.Y.Z` | `govee-mirror` | GitHub release, Windows `.exe` |
 
 Versions are **not** kept in lockstep. Six packages that move at different
 speeds and share a version number would mean publishing five no-op releases

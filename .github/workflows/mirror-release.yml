@@ -1,0 +1,55 @@
+# Builds govee-mirror.exe from apps/mirror and attaches it to the GitHub
+# release. Triggered by a mirror-vX.Y.Z tag. The app captures the screen
+# through DXGI, so the build runs on Windows alone.
+name: Mirror release
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["mirror-v*"]
+
+jobs:
+  release:
+    runs-on: windows-latest
+    permissions:
+      contents: write   # create the GitHub release
+      actions: read     # read the CI run of the tagged commit
+    defaults:
+      run:
+        shell: bash
+        working-directory: apps/mirror
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: CI passed on this commit
+        if: github.event_name == 'push'
+        working-directory: .
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: tools/ci-passed.sh "$GITHUB_SHA"
+      # The tag, the manifest version and the changelog heading have to carry
+      # the same number before anything is built.
+      - name: Tag, manifest and changelog agree
+        if: github.event_name == 'push'
+        working-directory: .
+        run: |
+          tools/release-notes.sh mirror "$GITHUB_REF_NAME" \
+            > "$RUNNER_TEMP/notes.md"
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # v1
+        with:
+          toolchain: stable
+      - name: Test
+        run: cargo test --locked
+      - name: Build
+        run: cargo build --release --locked
+      - name: GitHub release
+        if: github.event_name == 'push'
+        uses: ./.github/actions/github-release
+        with:
+          notes: ${{ runner.temp }}/notes.md
+      # A tag moved to a new commit reruns the job: `--clobber` replaces the
+      # executable of the earlier run.
+      - name: Attach the executable
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" target/release/govee-mirror.exe --clobber
