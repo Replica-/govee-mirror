@@ -13,7 +13,7 @@ phone controller.
 
 - Finds every Govee light on the network that has "LAN Control" enabled.
 - Shows each light's segments as numbered swatches, one color each. A click
-  on a swatch lights that segment white on the real light, so you see where
+  on a swatch blinks that segment white on the real light, so you see where
   it is.
 - Paints cells onto segments: click or drag over the screen preview. A segment
   that several cells feed takes their average.

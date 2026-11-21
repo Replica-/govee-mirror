@@ -28,8 +28,6 @@ use crate::mapping::{Sources, plan, render};
 use crate::pattern;
 use crate::settings::Settings;
 
-const HIGHLIGHT: Duration = Duration::from_millis(1500);
-
 pub struct Engine {
     commands: UnboundedSender<Command>,
     pub status: Shared,
@@ -74,6 +72,7 @@ struct Mirror {
     writers: HashMap<String, Writer>,
     plan: HashMap<String, Sources>,
     state: HashMap<String, Vec<[f32; 3]>>,
+    /// The light and segment that blink, and when the blink started.
     highlight: Option<(String, usize, Instant)>,
     rendered: u32,
     reported: Instant,
@@ -297,7 +296,7 @@ impl Context {
     /// would end the segment channel.
     async fn highlight(&mut self, id: String, segment: usize) {
         if let Some(mirror) = self.mirror.as_mut().filter(|m| m.writers.contains_key(&id)) {
-            mirror.highlight = Some((id, segment, Instant::now() + HIGHLIGHT));
+            mirror.highlight = Some((id, segment, Instant::now()));
             return;
         }
         let Some(target) = self.target(&id) else {
@@ -336,16 +335,17 @@ impl Context {
                 self.settings.smoothing,
                 self.settings.saturation,
             );
-            if let Some((id, segment, until)) = &mirror.highlight {
-                if Instant::now() < *until {
-                    if let Some(colors) = frames.get_mut(id) {
-                        colors.fill([0; 3]);
-                        if let Some(color) = colors.get_mut(*segment) {
-                            *color = [255; 3];
+            if let Some((id, segment, started)) = &mirror.highlight {
+                match writer::blink(started.elapsed()) {
+                    Some(on) => {
+                        if let Some(colors) = frames.get_mut(id) {
+                            colors.fill([0; 3]);
+                            if let Some(color) = colors.get_mut(*segment).filter(|_| on) {
+                                *color = [255; 3];
+                            }
                         }
                     }
-                } else {
-                    mirror.highlight = None;
+                    None => mirror.highlight = None,
                 }
             }
             for (id, colors) in &frames {

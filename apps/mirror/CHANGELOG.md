@@ -15,7 +15,7 @@ that carries `govee-mirror.exe`. The policy is
 - Capture through DXGI Desktop Duplication. The GPU shrinks each frame, and
   a copy about 256 pixels wide comes back to the CPU.
 - A light list with power, brightness and color, and a palette of numbered
-  segment swatches. A click on a swatch lights that segment on the light.
+  segment swatches. A click on a swatch blinks that segment on the light.
 - A segment count per light: a resolution that the device file offers, or a
   count set by hand.
 - Mirror on launch, and start with Windows, minimized.

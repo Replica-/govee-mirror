@@ -2,7 +2,9 @@
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use govee_toolkit::{DeviceId, Govee, Mode, Paint, SegmentStream, StreamOptions};
+use std::time::{Duration, Instant};
+
+use govee_toolkit::{DeviceId, Govee, Mode, SegmentStream, StreamOptions};
 use tokio::time::sleep;
 
 use super::targets::Target;
@@ -63,7 +65,22 @@ pub async fn open(
     Ok(Writer::Stream(stream))
 }
 
-/// Light one segment white and the others black, with no writer open.
+/// How many times a highlight lights its segment.
+const BLINKS: u32 = 4;
+/// How long each half of one blink lasts.
+const BLINK: Duration = Duration::from_millis(250);
+
+/// Whether the segment is lit `elapsed` into a highlight, and `None` once the
+/// highlight has ended. The segment is lit in the first half of each blink.
+pub fn blink(elapsed: Duration) -> Option<bool> {
+    let half = elapsed.as_millis() / BLINK.as_millis();
+    (half < u128::from(BLINKS) * 2).then_some(half.is_multiple_of(2))
+}
+
+/// Blink one segment white with the others black, with no writer open.
+///
+/// The blink goes out over a stream of its own. Its close disarms the
+/// channel, so the light goes back to the color it showed before.
 pub async fn highlight(
     govee: &Govee,
     target: &Target,
@@ -76,22 +93,34 @@ pub async fn highlight(
     handle.power(true).await?;
     sleep(handle.command_gap()?).await;
     if !target.streams() {
+        // One zone through the color command, which waits for the light: the
+        // blink is as fast as the light answers, and it ends white.
+        for _ in 0..BLINKS {
+            handle.color([255, 255, 255]).await?;
+            sleep(BLINK).await;
+            handle.color([0, 0, 0]).await?;
+            sleep(BLINK).await;
+        }
         handle.color([255, 255, 255]).await?;
         return Ok(());
     }
-    let mut colors = vec![[0u8; 3]; zones];
-    if let Some(color) = colors.get_mut(segment) {
+    let mut lit = vec![[0u8; 3]; zones];
+    if let Some(color) = lit.get_mut(segment) {
         *color = [255, 255, 255];
     }
-    handle
-        .segment(&Paint {
-            zones: None,
-            colors: &colors,
+    let dark = vec![[0u8; 3]; zones];
+    let stream = handle
+        .open_stream(StreamOptions {
             resolution: frame,
-            gradient: false,
+            ..StreamOptions::default()
         })
         .await?;
-    Ok(())
+    let started = Instant::now();
+    while let Some(on) = blink(started.elapsed()) {
+        stream.set_all(if on { &lit } else { &dark })?;
+        sleep(Duration::from_millis(20)).await;
+    }
+    stream.close().await
 }
 
 impl Writer {
@@ -180,5 +209,20 @@ impl ColorQueue {
                 }
             }
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_blink_lights_the_first_half_of_each_period_and_then_ends() {
+        let at = |ms| blink(Duration::from_millis(ms));
+        assert_eq!(at(0), Some(true));
+        assert_eq!(at(260), Some(false));
+        assert_eq!(at(510), Some(true));
+        assert_eq!(at(1990), Some(false));
+        assert_eq!(at(2000), None);
     }
 }

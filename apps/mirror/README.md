@@ -41,8 +41,8 @@ Mirror" configurations in `.vscode/launch.json` build and start the app.
    follow from the shape of the screen, so that every cell is square.
 2. Click a light on the left. Its segments show on the right, one numbered
    swatch each.
-3. Click a swatch. It becomes the brush, and that segment lights white on the
-   light for a moment.
+3. Click a swatch. It becomes the brush, and that segment blinks white on the
+   light 4 times. Then the light goes back to what it showed.
 4. Click or drag over cells to give them that segment. Right-click or drag to
    clear cells.
 5. Press **Start mirror**.
