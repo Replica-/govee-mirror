@@ -46,7 +46,7 @@ have survived `ble` and `cloud` landing — not on a date.
 | `python-vX.Y.Z` | `govee-toolkit` | PyPI |
 | `node-vX.Y.Z` | `govee-toolkit` | npm |
 | `mcp-vX.Y.Z` | `govee-toolkit-mcp` | npm |
-| `mirror-vX.Y.Z` | `govee-mirror` | GitHub release, Windows `.exe` |
+| `mirror-vX.Y.Z` | `govee-mirror-pc` | GitHub release, Windows `.exe` |
 
 Versions are **not** kept in lockstep. Six packages that move at different
 speeds and share a version number would mean publishing five no-op releases

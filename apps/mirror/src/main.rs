@@ -31,6 +31,9 @@ fn main() -> eframe::Result {
         }
     };
     let minimized = std::env::args().any(|arg| arg == startup::MINIMIZED);
+    // Best effort: a failure leaves the entry as it was, and the checkbox
+    // shows it off.
+    let _ = startup::migrate();
     log_panics();
     let (settings, load_problem) = Settings::load();
     let requests = Arc::new(Mutex::new(Request {
@@ -41,13 +44,13 @@ fn main() -> eframe::Result {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Govee Mirror")
+            .with_title("Govee Mirror PC")
             .with_inner_size([1320.0, 860.0])
             .with_min_inner_size([900.0, 600.0]),
         ..Default::default()
     };
     eframe::run_native(
-        "Govee Mirror",
+        "Govee Mirror PC",
         options,
         Box::new(move |cc| {
             let ctx = cc.egui_ctx.clone();

@@ -15,7 +15,7 @@ shipped.
 | `govee-toolkit` (Python) | [`packages/python/CHANGELOG.md`](packages/python/CHANGELOG.md) | 0.8.0 |
 | `govee-toolkit` (Node) | [`packages/node/CHANGELOG.md`](packages/node/CHANGELOG.md) | 0.7.0 |
 | `govee-toolkit-mcp` (MCP server) | [`integrations/mcp/CHANGELOG.md`](integrations/mcp/CHANGELOG.md) | 0.2.0 |
-| `govee-mirror` (Windows app) | [`apps/mirror/CHANGELOG.md`](apps/mirror/CHANGELOG.md) | 0.1.0 |
+| `govee-mirror-pc` (Windows app) | [`apps/mirror/CHANGELOG.md`](apps/mirror/CHANGELOG.md) | 0.1.1 |
 
 ## Catalog
 

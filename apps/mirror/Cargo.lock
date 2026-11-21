@@ -710,8 +710,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "govee-mirror"
-version = "0.1.0"
+name = "govee-mirror-pc"
+version = "0.1.1"
 dependencies = [
  "eframe",
  "govee-toolkit",

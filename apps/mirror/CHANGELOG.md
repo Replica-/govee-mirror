@@ -1,9 +1,19 @@
 # Changelog
 
-Changes to `govee-mirror`, the Windows app in `apps/mirror`. It versions apart
-from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub release
-that carries `govee-mirror.exe`. The policy is
+Changes to `govee-mirror-pc`, the Windows app in `apps/mirror`. It versions
+apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
+release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
+
+## [0.1.1] — 2026-11-22
+
+### Changed
+
+- The app is `govee-mirror-pc`, and the executable `govee-mirror-pc.exe`. A
+  start-with-Windows entry written under the earlier name moves to the new
+  executable on the first start.
+- The executable links the C runtime statically. It starts on a Windows
+  machine with no Visual C++ Redistributable installed.
 
 ## [0.1.0] — 2026-11-21
 

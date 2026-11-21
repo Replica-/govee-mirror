@@ -1,42 +1,44 @@
-# govee-mirror
+# govee-mirror-pc
 
-Mirror your screen onto your Govee lights over your own network. A grid of
-square cells covers the screen, and you paint each cell onto one segment of
-one light. The lights follow the screen in real time, with no cloud and no
-phone controller.
+A replacement for DreamView on Windows. I got sick of the Govee app, so this
+mirrors the screen onto Govee lights straight over your own network: no
+account, no cloud, no phone.
+
+## Features
+
+- **Screen mirror.** A grid of square cells covers the screen, and you paint
+  each cell onto one segment of one light. A segment that several cells feed
+  takes their average.
+- **More segments than the Govee app.** It drives every zone the light's
+  segment channel renders: 20 on the H61F2 strip, where the app shows 10.
+- **Segment palette.** Each light's segments show as numbered swatches, one
+  color each. A click on a swatch blinks that segment white on the real
+  light, so you see where it is.
+- **Lights found on their own.** Every Govee light on the network with "LAN
+  Control" enabled shows up, with power, brightness and color controls.
+- **Patterns.** Rainbow rings, a color wheel of 12 solid wedges, or a spiral,
+  in place of the screen. Each one moves or holds still.
+- **Solid colors.** A saturation setting pushes averaged colors away from
+  grey, and smoothing calms them over time.
+- **Blend between segments.** The light fades from one segment to the next,
+  where you turn it on.
+- **Starts on its own.** Start with Windows, minimized, and start the mirror
+  on launch.
+- **Light on the machine.** The GPU shrinks the screen and about 256 pixels
+  come back per frame. A screen that does not change costs nothing.
+- **One file.** `govee-mirror-pc.exe` runs on Windows 10 and 11 with nothing
+  else to install.
 
 ![The lights and their segments](apps/mirror/docs/lights.png)
 
 ![Two light bars, one on each edge of the screen](apps/mirror/docs/segments.png)
 
-## What it does
-
-- Finds every Govee light on the network that has "LAN Control" enabled.
-- Shows each light's segments as numbered swatches, one color each. A click
-  on a swatch blinks that segment white on the real light, so you see where
-  it is.
-- Paints cells onto segments: click or drag over the screen preview. A segment
-  that several cells feed takes their average.
-- Streams each light at the rate its device file measured. Only the newest
-  frame goes out, so a light never falls behind the screen.
-- Pushes averaged colors back toward full color (**saturation**), and smooths
-  them over time (**smoothing**).
-- Blends between segments on the light itself, where you turn it on.
-- Mirrors a pattern in place of the screen: rainbow rings, a color wheel of
-  12 solid wedges, or a spiral. Each one moves or holds still.
-- Starts the mirror on launch, and starts with Windows, minimized, when you
-  turn those on.
-- Controls each light: power, brightness and color.
-
-The capture is cheap. DXGI Desktop Duplication hands the screen over on the
-GPU, the GPU shrinks it, and a copy about 256 pixels wide comes back. A
-screen that does not change costs nothing.
-
 ## Get it
 
-Download `govee-mirror.exe` from the
-[releases page](https://github.com/Replica-/govee-mirror/releases). It is one
-file, and it runs on Windows 10 and 11.
+Download `govee-mirror-pc.exe` from the
+[releases page](https://github.com/Replica-/govee-mirror/releases) and run it.
+Close Govee Desktop first: only one program can take the port the lights
+answer on.
 
 To build it yourself, install Rust with the MSVC toolchain, then:
 
@@ -64,7 +66,7 @@ list mirrors as one color.
 
 ## Built on Govee Toolkit
 
-govee-mirror is a fork of
+govee-mirror-pc is a fork of
 [Govee Toolkit](https://github.com/damient/govee-toolkit). The toolkit
 implements the protocol, and the app calls it directly. What follows is the
 toolkit's own description.

@@ -12,7 +12,9 @@ mod imp {
     use winreg::enums::{HKEY_CURRENT_USER, KEY_READ, KEY_SET_VALUE};
 
     const RUN: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
-    const VALUE: &str = "GoveeMirror";
+    const VALUE: &str = "GoveeMirrorPC";
+    /// The value the app wrote before it was govee-mirror-pc.
+    const LEGACY: &str = "GoveeMirror";
 
     fn command() -> io::Result<String> {
         Ok(format!(
@@ -29,6 +31,19 @@ mod imp {
             .open_subkey_with_flags(RUN, KEY_READ)
             .and_then(|key| key.get_value::<String, _>(VALUE))
             .is_ok_and(|value| command().is_ok_and(|ours| value == ours))
+    }
+
+    /// Move an entry written under the earlier name to this executable. It
+    /// names an executable that this build replaces, so it is removed, and
+    /// this one is written in its place.
+    pub fn migrate() -> io::Result<()> {
+        let key = RegKey::predef(HKEY_CURRENT_USER)
+            .open_subkey_with_flags(RUN, KEY_READ | KEY_SET_VALUE)?;
+        if key.get_value::<String, _>(LEGACY).is_err() {
+            return Ok(());
+        }
+        key.delete_value(LEGACY)?;
+        set(true)
     }
 
     pub fn set(on: bool) -> io::Result<()> {
@@ -48,6 +63,10 @@ mod imp {
 mod imp {
     use std::io;
 
+    pub fn migrate() -> io::Result<()> {
+        Ok(())
+    }
+
     pub fn enabled() -> bool {
         false
     }
@@ -59,4 +78,4 @@ mod imp {
     }
 }
 
-pub use imp::{enabled, set};
+pub use imp::{enabled, migrate, set};

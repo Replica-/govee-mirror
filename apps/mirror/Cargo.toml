@@ -1,7 +1,7 @@
 [package]
-name = "govee-mirror"
-description = "Mirror the screen onto Govee lights over the LAN: a grid over the screen, one cell to one segment. Unofficial."
-version = "0.1.0"
+name = "govee-mirror-pc"
+description = "A replacement for DreamView on Windows: mirror the screen onto Govee lights over the LAN, one grid cell to one segment. Unofficial."
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT"
@@ -14,7 +14,7 @@ publish = false
 [workspace]
 
 [[bin]]
-name = "govee-mirror"
+name = "govee-mirror-pc"
 path = "src/main.rs"
 
 [dependencies]

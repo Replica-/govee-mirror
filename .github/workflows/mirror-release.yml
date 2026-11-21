@@ -1,4 +1,4 @@
-# Builds govee-mirror.exe from apps/mirror and attaches it to the GitHub
+# Builds govee-mirror-pc.exe from apps/mirror and attaches it to the GitHub
 # release. Triggered by a mirror-vX.Y.Z tag. The app captures the screen
 # through DXGI, so the build runs on Windows alone.
 name: Mirror release
@@ -52,4 +52,4 @@ jobs:
         if: github.event_name == 'push'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" target/release/govee-mirror.exe --clobber
+        run: gh release upload "$GITHUB_REF_NAME" target/release/govee-mirror-pc.exe --clobber
