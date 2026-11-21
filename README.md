@@ -1,6 +1,75 @@
-![Govee Toolkit](docs/assets/banner.png)
+# govee-mirror
 
-# Govee Toolkit
+Mirror your screen onto your Govee lights over your own network. A grid of
+square cells covers the screen, and you paint each cell onto one segment of
+one light. The lights follow the screen in real time, with no cloud and no
+phone controller.
+
+![The lights and their segments](apps/mirror/docs/lights.png)
+
+![Two light bars, one on each edge of the screen](apps/mirror/docs/segments.png)
+
+## What it does
+
+- Finds every Govee light on the network that has "LAN Control" enabled.
+- Shows each light's segments as numbered swatches, one color each. A click
+  on a swatch lights that segment white on the real light, so you see where
+  it is.
+- Paints cells onto segments: click or drag over the screen preview. A segment
+  that several cells feed takes their average.
+- Streams each light at the rate its device file measured. Only the newest
+  frame goes out, so a light never falls behind the screen.
+- Pushes averaged colors back toward full color (**saturation**), and smooths
+  them over time (**smoothing**).
+- Blends between segments on the light itself, where you turn it on.
+- Starts the mirror on launch, and starts with Windows, minimized, when you
+  turn those on.
+- Controls each light: power, brightness and color.
+
+The capture is cheap. DXGI Desktop Duplication hands the screen over on the
+GPU, the GPU shrinks it, and a copy about 256 pixels wide comes back. A
+screen that does not change costs nothing.
+
+## Get it
+
+Download `govee-mirror.exe` from the
+[releases page](https://github.com/Replica-/govee-mirror/releases). It is one
+file, and it runs on Windows 10 and 11.
+
+To build it yourself, install Rust with the MSVC toolchain, then:
+
+```sh
+cd apps/mirror
+cargo run --release
+```
+
+The app's own page is [`apps/mirror/README.md`](apps/mirror/README.md).
+
+## Lights measured for this
+
+A light mirrors segment by segment where its device file gives it the
+segment channel over `lan`. These two were measured for this app, on one unit
+each:
+
+| Model | Name | Segments in the Govee app | Segments here |
+| ----- | ---- | ------------------------- | ------------- |
+| H61F2 | Strip Light 2 Pro | 10 | 20 |
+| H6056 | RGBICWW Light Bars | 6 | 12, 6 per bar |
+
+The other models of [`docs/compatibility.md`](docs/compatibility.md) that
+reach segments over `lan` mirror the same way. Any other light on Govee's LAN
+list mirrors as one color.
+
+## Built on Govee Toolkit
+
+govee-mirror is a fork of
+[Govee Toolkit](https://github.com/damient/govee-toolkit). The toolkit
+implements the protocol, and the app calls it directly. What follows is the
+toolkit's own description.
+
+---
+
+## Govee Toolkit
 
 Your lights live on your network, and your commands stay there with them. Wi-Fi
 or a Bluetooth link is all the toolkit needs, straight from your own machine.
