@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Govee Mirror PC (debug)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/mirror/target/debug/govee-mirror-pc.exe",
+      "cwd": "${workspaceFolder}/apps/mirror",
+      "preLaunchTask": "mirror: build debug",
+      "console": "integratedTerminal"
+    },
+    {
+      "name": "Govee Mirror PC (release)",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/apps/mirror/target/release/govee-mirror-pc.exe",
+      "cwd": "${workspaceFolder}/apps/mirror",
+      "preLaunchTask": "mirror: build release",
+      "console": "integratedTerminal"
+    }
+  ]
+}
