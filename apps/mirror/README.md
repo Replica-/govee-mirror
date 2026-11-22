@@ -42,13 +42,17 @@ Mirror PC" configurations in `.vscode/launch.json` build and start the app.
 
 1. Choose the screen and the number of columns in the top bar. The rows
    follow from the shape of the screen, so that every cell is square.
-2. Click a light on the left. Its segments show on the right, one numbered
-   swatch each.
+2. Click a light on the left. The lights sit in a section per brand, and
+   each card opens with its arrow. The light's segments show on the right,
+   one numbered swatch each.
 3. Click a swatch. It becomes the brush, and that segment blinks white on the
    light 4 times. Then the light goes back to what it showed.
 4. Click or drag over cells to give them that segment. Right-click or drag to
    clear cells.
 5. Press **Start mirror**.
+
+Under the button, the app shows the frame rate that the mirror reaches, and
+the share of CPU and GPU that it uses, as Task Manager counts them.
 
 A segment that several cells feed takes their average. A dimmed swatch is a
 segment that no cell feeds: it stays dark while the mirror runs.
@@ -86,8 +90,7 @@ A profile holds a whole setup: the screen, the grid, the cells, each light's
 resolution and blend, the source, and the saturation, smoothing and rate.
 The Razer port counts and **Mirror on launch** are shared by every profile.
 
-At the top of the left panel, pick a profile, or press **New** for a copy of
-this one. A profile can name a program, such as `game.exe`: while it runs,
+Above the grid, pick a profile, or press **New** for a copy of this one. A profile can name a program, such as `game.exe`: while it runs,
 the app switches to that profile, and it switches back to the one you picked
 when the program ends. The process list is read every 5 seconds, and only
 while a profile names a program.
@@ -98,8 +101,8 @@ The app drives the Razer Wired ARGB Controller (Razer Chroma Addressable RGB
 Controller) over USB. Synapse must be closed: it sends frames of its own,
 and the app warns after a scan when it runs.
 
-- In the **Razer ARGB controller** box below the lights, set the LED count
-  of each port as Synapse set it. A port with 0 is left out.
+- Open **General** in the **Razer** section, and set the LED count of each
+  port as Synapse set it. A port with 0 is left out.
 - Each port with LEDs is a light, and each LED a segment. **Set by hand**
   groups the LEDs into fewer segments.
 - The LEDs follow the mirror while it runs. Stopping the mirror, or Exit,
@@ -119,7 +122,8 @@ and the app warns after a scan when it runs.
 | Start with Windows | Top bar, and the tray menu | Starts the app in the notification area when you sign in. Clear it to remove the entry. |
 | Resolution | Each light | The segment count: as the Govee app shows it, every zone the segment channel renders, or one per LED where the device file measured that. The finest is the default. |
 | Set by hand | Each light | A segment count of your own, up to what the channel renders. |
-| Blend between segments | Each light | The light fades from one segment to the next instead of hard blocks. The firmware also wraps from the last segment back to the first. |
+| Blend between segments | Each light | The light fades from one segment to the next instead of hard blocks. On a Govee light, the firmware also wraps from the last segment back to the first. On a Razer port, the app computes the fade; with one segment per LED, each LED takes the mean of its color and the colors next to it. |
+| On, Off, color, brightness | Each Govee light, and **General** in the Govee section for every light at once | The general brightness is a percent of each light's own range. |
 
 While the mirror runs, the power and color buttons are off: a power command
 ends the segment channel on some models. Brightness stays available.
@@ -136,7 +140,9 @@ ends the segment channel on some models. Brightness stays available.
 DXGI Desktop Duplication hands over the screen as a GPU texture. The GPU
 shrinks it with its mipmap chain, and a copy about 256 pixels wide comes back
 to the CPU. A screen that does not change delivers no frame. An HDR screen is
-captured in 8 bits per channel. `src/capture/dxgi.rs` is the one module with
+captured in 8 bits per channel. The capture runs at the mirror rate while
+the mirror reads the screen, and at 10 frames per second while only the
+window preview needs it. With neither, it stops and releases the screen. `src/capture/dxgi.rs` is the one module with
 `unsafe` code: every Direct3D call is a COM call.
 
 ## Files

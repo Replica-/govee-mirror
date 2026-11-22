@@ -1,5 +1,7 @@
 //! The window.
 
+mod bar;
+mod brands;
 mod brush;
 mod devices;
 mod grid;
@@ -9,14 +11,14 @@ mod shell;
 
 use std::time::{Duration, Instant};
 
-use eframe::egui::{self, Color32, ColorImage, RichText, TextureHandle, TextureOptions};
+use eframe::egui::{self, Color32, ColorImage, TextureHandle, TextureOptions};
 
 use crate::capture::{self, Request, Requests};
 use crate::engine::{self, Command, Engine};
 use crate::mapping::square_rows;
-use crate::pattern::{self, Source};
+use crate::pattern;
 use crate::settings::Settings;
-use crate::startup;
+use crate::{startup, usage};
 
 pub use self::brush::{Brush, Tool, segment_color, text_on};
 pub use self::profiles::Profiles;
@@ -42,6 +44,7 @@ pub struct App {
     controls: devices::Controls,
     shell: Shell,
     profiles: Profiles,
+    usage: usage::Shared,
     /// The `Run` entry as last read or written.
     with_windows: bool,
 }
@@ -56,6 +59,7 @@ impl App {
         shell: Shell,
         profiles: Profiles,
     ) -> Self {
+        let usage = usage::spawn(std::sync::Arc::clone(&capture));
         Self {
             runtime,
             engine,
@@ -69,6 +73,7 @@ impl App {
             controls: devices::Controls::default(),
             shell,
             profiles,
+            usage,
             with_windows: startup::enabled(),
         }
     }
@@ -128,7 +133,10 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        self.shell.frame(&ctx, &mut self.with_windows);
+        // eframe runs no frame for a hidden or minimized window, so the last
+        // frame before it hides sets this to false.
+        let shown = self.shell.frame(&ctx, &mut self.with_windows);
+        capture::lock(&self.capture).demand.window = shown;
         if let Some(settings) = self.profiles.switched() {
             // The watcher has handed these to the engine and the capture.
             self.settings = settings;
@@ -151,130 +159,16 @@ impl eframe::App for App {
         }
 
         egui::Panel::top("bar").show(ui, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                let busy = status.busy.is_some();
-                let label = if status.running {
-                    "Stop mirror"
-                } else {
-                    "Start mirror"
-                };
-                if ui
-                    .add_enabled(!busy, egui::Button::new(RichText::new(label).strong()))
-                    .clicked()
-                {
-                    commands.push(if status.running {
-                        Command::Stop
-                    } else {
-                        Command::Start
-                    });
-                }
-                ui.separator();
-                let screen = screens
-                    .get(self.settings.display)
-                    .cloned()
-                    .unwrap_or_else(|| "Screen".to_owned());
-                egui::ComboBox::from_id_salt("screen")
-                    .selected_text(screen)
-                    .show_ui(ui, |ui| {
-                        for (index, name) in screens.iter().enumerate() {
-                            changed |= ui
-                                .selectable_value(&mut self.settings.display, index, name)
-                                .changed();
-                        }
-                    });
-                ui.label("Columns");
-                changed |= ui
-                    .add(egui::DragValue::new(&mut self.settings.grid.cols).range(1..=96))
-                    .changed();
-                ui.label(
-                    RichText::new(format!("× {} rows, square cells", self.settings.grid.rows))
-                        .weak(),
-                );
-                ui.separator();
-                changed |= ui
-                    .add(
-                        egui::DragValue::new(&mut self.settings.fps)
-                            .range(5..=60)
-                            .suffix(" fps"),
-                    )
-                    .changed();
-                changed |= ui
-                    .add(
-                        egui::Slider::new(&mut self.settings.smoothing, 0.0..=0.95)
-                            .text("smoothing"),
-                    )
-                    .changed();
-                changed |= ui
-                    .add(
-                        egui::Slider::new(&mut self.settings.saturation, 1.0..=2.0)
-                            .text("saturation"),
-                    )
-                    .on_hover_text(
-                        "Pushes colors away from grey, so that the lights show solid colors",
-                    )
-                    .changed();
-                ui.separator();
-                egui::ComboBox::from_id_salt("source")
-                    .selected_text(self.settings.source.label())
-                    .show_ui(ui, |ui| {
-                        for source in Source::ALL {
-                            changed |= ui
-                                .selectable_value(&mut self.settings.source, source, source.label())
-                                .changed();
-                        }
-                    })
-                    .response
-                    .on_hover_text("What the lights mirror: the screen, or a pattern");
-                if self.settings.source != Source::Screen {
-                    changed |= ui.checkbox(&mut self.settings.moving, "Moving").changed();
-                }
-                if self.settings.source != Source::Screen && self.settings.moving {
-                    changed |= ui
-                        .add(
-                            egui::Slider::new(&mut self.settings.animation_speed, 0.05..=2.0)
-                                .logarithmic(true)
-                                .text("speed"),
-                        )
-                        .changed();
-                }
-                ui.separator();
-                changed |= ui
-                    .checkbox(&mut self.settings.mirror_on_launch, "Mirror on launch")
-                    .changed();
-                if ui
-                    .checkbox(&mut self.with_windows, "Start with Windows")
-                    .on_hover_text("Starts in the tray when you sign in")
-                    .changed()
-                    && let Err(error) = startup::set(self.with_windows)
-                {
-                    self.with_windows = startup::enabled();
-                    problem = Some(format!("Start with Windows did not change: {error}"));
-                }
-                ui.separator();
-                if let Some(busy) = status.busy {
-                    ui.spinner();
-                    ui.label(busy);
-                } else if status.running {
-                    ui.label(format!("{} frames per second", status.fps));
-                }
-                if let Some(error) = &capture_error {
-                    ui.colored_label(Color32::LIGHT_RED, format!("Capture: {error}"));
-                }
-            });
+            let out = self.bar(ui, &status, &screens, capture_error.as_deref());
+            commands.extend(out.commands);
+            changed |= out.changed;
+            problem = out.problem;
         });
 
         egui::Panel::left("devices")
-            .default_size(300.0)
+            .default_size(320.0)
+            .min_size(280.0)
             .show(ui, |ui| {
-                match self.profiles.panel(ui, &self.settings) {
-                    profiles::Action::Switched => {
-                        self.settings = self.profiles.lock().current();
-                        changed = true;
-                    }
-                    profiles::Action::Edited => self.unsaved = Some(Instant::now()),
-                    profiles::Action::None => {}
-                }
-                ui.separator();
                 ui.horizontal(|ui| {
                     ui.heading("Lights");
                     if ui
@@ -329,6 +223,8 @@ impl eframe::App for App {
         );
         let moving = animation.is_some() && self.settings.moving;
         egui::CentralPanel::default().show(ui, |ui| {
+            changed |= self.profile(ui);
+            ui.add_space(6.0);
             changed |= grid::show(
                 ui,
                 &mut self.settings,

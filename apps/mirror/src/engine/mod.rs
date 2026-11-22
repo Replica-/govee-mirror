@@ -147,6 +147,7 @@ async fn run(
                     cx.start().await;
                     (cx.repaint)();
                 }
+                cx.demand();
                 if cx.settings.fps != fps {
                     tick = interval(period(cx.settings.fps));
                     tick.set_missed_tick_behavior(MissedTickBehavior::Skip);
@@ -326,6 +327,12 @@ impl Context {
         if let Err(error) = result {
             self.message(&id, error);
         }
+    }
+
+    /// Tell the capture whether the mirror reads the screen.
+    fn demand(&self) {
+        capture::lock(&self.capture).demand.mirror =
+            self.mirror.is_some() && self.settings.source == pattern::Source::Screen;
     }
 
     fn message(&self, id: &str, text: String) {

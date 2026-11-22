@@ -1,18 +1,32 @@
-//! The light list: one card per light, with its controls. A click on a card
-//! opens its segments in the palette.
+//! The light list: a section per brand, then one card per light, with its
+//! controls. A click on a card opens its segments in the palette.
 
 use std::collections::HashMap;
 
 use eframe::egui::{self, Color32, RichText, Sense, Ui, UiBuilder};
 
+use super::brands::{self, Brand};
 use crate::engine::{Command, Control, Status, Target};
 use crate::settings::{Resolution, Settings};
 use crate::ui::Brush;
 
-#[derive(Default)]
 pub struct Controls {
     brightness: HashMap<String, i64>,
     color: HashMap<String, [u8; 3]>,
+    pub(super) all_color: [u8; 3],
+    /// Percent of each light's own range.
+    pub(super) all_brightness: u8,
+}
+
+impl Default for Controls {
+    fn default() -> Self {
+        Self {
+            brightness: HashMap::new(),
+            color: HashMap::new(),
+            all_color: [255; 3],
+            all_brightness: 100,
+        }
+    }
 }
 
 /// Answers the commands to send, and whether the settings changed.
@@ -25,89 +39,157 @@ pub fn show(
 ) -> (Vec<Command>, bool) {
     let mut commands = Vec::new();
     let mut changed = false;
-    if status.targets.is_empty() && status.busy.is_none() {
-        ui.label(RichText::new("No light yet. Press Scan.").weak());
-    }
     if brush.target.is_none() {
         brush.target = status.targets.first().map(|t| t.id.clone());
     }
-    for target in &status.targets {
-        let chosen = brush.target.as_ref() == Some(&target.id);
-        let stroke = if chosen {
-            egui::Stroke::new(2.0, Color32::WHITE)
-        } else {
-            egui::Stroke::new(1.0, Color32::from_gray(70))
-        };
-        // The sense goes on the scope, under the controls: a sense added after
-        // them sits on top and takes their clicks.
-        let card = ui.scope_builder(UiBuilder::new().sense(Sense::click()), |ui| {
-            egui::Frame::group(ui.style()).stroke(stroke).show(ui, |ui| {
-                ui.set_width(ui.available_width());
-                ui.label(RichText::new(&target.name).strong());
-                let zones = settings.zones(target);
-                ui.label(RichText::new(format!("{} · {zones} segments", target.sku)).weak());
-                changed |= segments(ui, settings, target);
-                if target.razer_port.is_some() {
-                    ui.label(
-                        RichText::new(
-                            "Lights while the mirror runs. The controller's own effect shows otherwise.",
-                        )
-                        .weak(),
-                    );
-                } else {
-                    commands.extend(govee_controls(ui, status, target, controls));
-                }
-
-                if let Some(text) = status.messages.get(&target.id) {
-                    ui.colored_label(Color32::LIGHT_RED, text);
-                } else if let Some(stats) = status.stats.get(&target.id) {
-                    match &stats.error {
-                        Some(error) => ui.colored_label(Color32::LIGHT_RED, error),
-                        None => {
-                            ui.label(RichText::new(format!("{} frames sent", stats.sent)).weak())
-                        }
-                    };
-                }
-            });
-        });
-        if card.response.clicked() && !chosen {
-            brush.target = Some(target.id.clone());
-            brush.segment = 0;
+    for brand in [Brand::Govee, Brand::Razer] {
+        let lights: Vec<&Target> = status
+            .targets
+            .iter()
+            .filter(|t| Brand::of(t) == brand)
+            .collect();
+        if brand == Brand::Razer && lights.is_empty() && !status.razer {
+            continue;
         }
-        ui.add_space(6.0);
-    }
-    if status.razer {
-        changed |= razer_ports(ui, settings);
+        brands::section(ui, brand, lights.len(), |ui| {
+            brands::general(ui, brand, |ui| match brand {
+                Brand::Govee => commands.extend(brands::govee(ui, status, controls)),
+                Brand::Razer => changed |= brands::razer(ui, status, settings),
+            });
+            if lights.is_empty() && status.busy.is_none() {
+                ui.label(RichText::new("No light yet. Press Scan.").weak());
+            }
+            for target in lights {
+                changed |= card(ui, status, settings, brush, controls, target, &mut commands);
+                ui.add_space(4.0);
+            }
+        });
+        ui.add_space(8.0);
     }
     (commands, changed)
 }
 
-/// The LED count of each port of the Razer ARGB controller. A port with 0 is
-/// not a light. Answers whether the settings changed.
-fn razer_ports(ui: &mut Ui, settings: &mut Settings) -> bool {
+/// One light: a header that folds, and its settings. A click on the card
+/// chooses the light for the palette. Answers whether the settings changed.
+fn card(
+    ui: &mut Ui,
+    status: &Status,
+    settings: &mut Settings,
+    brush: &mut Brush,
+    controls: &mut Controls,
+    target: &Target,
+    commands: &mut Vec<Command>,
+) -> bool {
     let mut changed = false;
-    egui::Frame::group(ui.style()).show(ui, |ui| {
-        ui.set_width(ui.available_width());
-        ui.label(RichText::new("Razer ARGB controller").strong());
-        ui.label(
-            RichText::new("LEDs on each port, as set in Synapse. 0 leaves the port out.").weak(),
-        );
-        egui::Grid::new("razer-ports")
-            .num_columns(2)
-            .show(ui, |ui| {
-                for (port, leds) in settings.razer_leds.iter_mut().enumerate() {
-                    ui.label(format!("Port {}", port + 1));
-                    changed |= ui
-                        .add(egui::DragValue::new(leds).range(0..=crate::razer::protocol::LEDS))
-                        .changed();
-                    ui.end_row();
-                }
-            });
+    let chosen = brush.target.as_ref() == Some(&target.id);
+    let stroke = if chosen {
+        egui::Stroke::new(2.0, Color32::WHITE)
+    } else {
+        egui::Stroke::new(1.0, Color32::from_gray(70))
+    };
+    // The sense goes on the scope, under the controls: a sense added after
+    // them sits on top and takes their clicks.
+    let card = ui.scope_builder(UiBuilder::new().sense(Sense::click()), |ui| {
+        egui::Frame::group(ui.style()).stroke(stroke).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let id = ui.make_persistent_id(("light", &target.id));
+            egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
+                .show_header(ui, |ui| {
+                    commands.extend(header(ui, status, target));
+                })
+                .body(|ui| {
+                    let zones = settings.zones(target);
+                    ui.label(RichText::new(format!("{} · {zones} segments", target.sku)).weak());
+                    changed |= segments(ui, settings, target);
+                    if target.razer_port.is_some() {
+                        ui.label(
+                            RichText::new(
+                                "Lights while the mirror runs. The controller's own effect shows otherwise.",
+                            )
+                            .weak(),
+                        );
+                    } else {
+                        commands.extend(govee_controls(ui, status, target, controls));
+                    }
+                    if let Some(stats) = status.stats.get(&target.id) {
+                        ui.label(RichText::new(format!("{} frames sent", stats.sent)).weak());
+                    }
+                });
+            if let Some(error) = problem(status, &target.id) {
+                ui.colored_label(Color32::LIGHT_RED, error);
+            }
+        });
     });
+    if card.response.clicked() && !chosen {
+        brush.target = Some(target.id.clone());
+        brush.segment = 0;
+    }
     changed
 }
 
-/// Power, color and brightness of a Govee light.
+/// The last failure of a command or of the stream to this light.
+fn problem<'a>(status: &'a Status, id: &str) -> Option<&'a str> {
+    status
+        .messages
+        .get(id)
+        .or_else(|| status.stats.get(id)?.error.as_ref())
+        .map(String::as_str)
+}
+
+/// A dot for the state, the name, and the power buttons.
+fn header(ui: &mut Ui, status: &Status, target: &Target) -> Vec<Command> {
+    let mut commands = Vec::new();
+    let dot = if problem(status, &target.id).is_some() {
+        Color32::from_rgb(220, 80, 80)
+    } else if status.stats.contains_key(&target.id) {
+        Color32::from_rgb(80, 200, 120)
+    } else {
+        Color32::from_gray(110)
+    };
+    // The buttons keep their room; a long name is cut short.
+    let room = ui.available_width()
+        - if target.razer_port.is_some() {
+            0.0
+        } else {
+            70.0
+        };
+    let height = ui.spacing().interact_size.y;
+    ui.allocate_ui_with_layout(
+        egui::vec2(room.max(0.0), height),
+        egui::Layout::left_to_right(egui::Align::Center),
+        |ui| {
+            let (rect, _) = ui.allocate_exact_size(egui::vec2(10.0, 10.0), Sense::hover());
+            ui.painter().circle_filled(rect.center(), 4.0, dot);
+            // A selectable label takes the click that chooses the card.
+            ui.add(
+                egui::Label::new(RichText::new(&target.name).strong())
+                    .truncate()
+                    .selectable(false),
+            );
+        },
+    );
+    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+        if target.razer_port.is_some() {
+            return;
+        }
+        // A power command ends the segment channel of some models while it
+        // is armed.
+        ui.add_enabled_ui(!status.running, |ui| {
+            for (text, on) in [("Off", false), ("On", true)] {
+                if ui
+                    .small_button(text)
+                    .on_disabled_hover_text("Stop the mirror first")
+                    .clicked()
+                {
+                    commands.push(Command::Control(target.id.clone(), Control::Power(on)));
+                }
+            }
+        });
+    });
+    commands
+}
+
+/// Color and brightness of a Govee light.
 fn govee_controls(
     ui: &mut Ui,
     status: &Status,
@@ -115,16 +197,8 @@ fn govee_controls(
     controls: &mut Controls,
 ) -> Vec<Command> {
     let mut commands = Vec::new();
-    // A power command ends the segment channel of some models while
-    // it is armed.
     ui.add_enabled_ui(!status.running, |ui| {
         ui.horizontal(|ui| {
-            if ui.button("On").clicked() {
-                commands.push(Command::Control(target.id.clone(), Control::Power(true)));
-            }
-            if ui.button("Off").clicked() {
-                commands.push(Command::Control(target.id.clone(), Control::Power(false)));
-            }
             let color = controls
                 .color
                 .entry(target.id.clone())

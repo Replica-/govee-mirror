@@ -34,9 +34,12 @@ impl Shell {
     }
 
     /// Run once per frame, before the window draws. `with_windows` is the
-    /// checkbox's view of the `Run` entry.
-    pub fn frame(&mut self, ctx: &Context, with_windows: &mut bool) {
+    /// checkbox's view of the `Run` entry. Answers whether the window shows
+    /// after this frame.
+    pub fn frame(&mut self, ctx: &Context, with_windows: &mut bool) -> bool {
+        let mut shown = !ctx.input(|i| i.viewport().minimized == Some(true));
         if std::mem::take(&mut self.hide) {
+            shown = false;
             ctx.send_viewport_cmd(match self.tray {
                 Some(_) => ViewportCommand::Visible(false),
                 None => ViewportCommand::Minimized(true),
@@ -48,6 +51,7 @@ impl Shell {
         if closing && self.tray.is_some() && !self.quitting.load(Ordering::SeqCst) {
             ctx.send_viewport_cmd(ViewportCommand::CancelClose);
             ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+            shown = false;
         }
 
         if self.synced.elapsed() >= SYNC {
@@ -57,5 +61,6 @@ impl Shell {
         if let Some(tray) = &self.tray {
             tray.sync(*with_windows);
         }
+        shown
     }
 }

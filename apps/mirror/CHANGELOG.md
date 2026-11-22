@@ -5,8 +5,36 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+## [0.3.0] — 2026-11-22
+
+### Added
+
+- Under the start button, the frame rate that the mirror reaches, and the
+  share of CPU and GPU that the app uses, as Task Manager counts them. The
+  app reads the share once a second, only while the window shows.
+- Each light card has On and Off buttons in its header, and a dot: green
+  while the light takes frames, red after a failure.
+- The light list groups the lights by brand, each brand in a section with
+  a colored header. A folded "General" block in each section holds what
+  covers the whole brand: for Govee, power, color and brightness for every
+  light at once; for Razer, the LED count of each port of the ARGB
+  controller.
+
 ### Changed
 
+- The top bar is one row: the start button, then titled groups for the
+  screen, the output sliders, the source and the startup options.
+- Each slider shows its name and its value above a filled track: the frame
+  rate in fps, the smoothing in percent, the saturation as the boost over
+  the screen ("Off" at none), and the pattern speed as a factor. The frame
+  rate is a slider.
+- The profile row sits above the grid.
+- A light card is collapsed by default. Its header shows the name, and the
+  card opens to show its segments, color and brightness.
+- The screen capture runs only when something reads it. The mirror on the
+  screen gets the rate set in the settings. The window preview alone gets 10
+  frames per second. With the mirror stopped or on a pattern, and the window
+  hidden, the capture stops and releases the screen.
 - With one segment per LED, the blend of a Razer port gives each LED the
   mean of its color and the colors of the LEDs next to it.
 
@@ -14,6 +42,8 @@ release that carries `govee-mirror-pc.exe`. The policy is
 
 - The controls on a light's card take their clicks. The card took the click
   for itself, so a checkbox, a list or a button there did nothing.
+- A click on a light's name chooses the light. The name took the click to
+  select its text.
 
 ## [0.2.0] — 2026-11-22
 

@@ -13,6 +13,7 @@ mod settings;
 mod startup;
 mod tray;
 mod ui;
+mod usage;
 mod watcher;
 
 use std::sync::atomic::{AtomicBool, AtomicU64};
@@ -50,6 +51,7 @@ fn main() -> eframe::Result {
         fps: settings.fps,
     }));
     let capture = capture::spawn(Arc::clone(&requests));
+    capture::lock(&capture).demand.window = !minimized;
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

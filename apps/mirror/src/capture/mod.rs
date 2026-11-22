@@ -62,7 +62,22 @@ pub struct Latest {
     pub frame: Option<Arc<Frame>>,
     pub error: Option<String>,
     pub screens: Vec<String>,
+    pub demand: Demand,
 }
+
+/// Who reads the screen now. With neither, the capture pauses.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct Demand {
+    /// The mirror runs on the screen, at the rate the settings give.
+    pub mirror: bool,
+    /// The window shows the preview, at [`PREVIEW_FPS`].
+    pub window: bool,
+}
+
+/// The preview redraws at this rate, so a faster capture is wasted on it.
+const PREVIEW_FPS: u32 = 10;
+/// How often a paused capture checks for a reader.
+const IDLE: Duration = Duration::from_millis(100);
 
 pub type Shared = Arc<Mutex<Latest>>;
 
@@ -97,7 +112,19 @@ fn run(requests: &Requests, shared: &Shared) {
     let mut sequence = 0u64;
     loop {
         let request = *requests.lock().unwrap_or_else(PoisonError::into_inner);
-        let period = Duration::from_secs(1) / request.fps.clamp(1, 120);
+        let demand = lock(shared).demand;
+        let fps = if demand.mirror {
+            request.fps
+        } else if demand.window {
+            PREVIEW_FPS
+        } else {
+            // An open duplication costs GPU time on each change of the
+            // screen, read or not.
+            current = None;
+            thread::sleep(IDLE);
+            continue;
+        };
+        let period = Duration::from_secs(1) / fps.clamp(1, 120);
         let started = Instant::now();
 
         if current
