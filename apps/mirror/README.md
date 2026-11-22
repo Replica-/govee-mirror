@@ -183,6 +183,7 @@ dongle instead. Synapse can stay open.
 | Set by hand | Each light | A segment count of your own, up to what the channel renders. |
 | Blend between segments | Each light | The light fades from one segment to the next instead of hard blocks. On a Govee light, the firmware also wraps from the last segment back to the first. On a Razer port, the app computes the fade; with one segment per LED, each LED takes the mean of its color and the colors next to it. |
 | Light addresses | The IP box and **Add** beside **Scan**; the list with **Remove** in **General** of the Govee section | IP addresses that each scan also asks directly. Add a light there when the scan does not find it: some routers drop the multicast scan. The list applies to every profile. |
+| Saved lights | The list with **Forget** in **General** of the Govee section | Each Govee light that a scan found, with the address it answered at. Each scan asks these addresses directly, so a light that the multicast scan misses comes back with its settings. **not found** marks a light that the last scan did not reach. The list applies to every profile. |
 | On, Off, color, brightness | Each Govee light, and **General** in the Govee section for every light at once | The general brightness is a percent of each light's own range. |
 | brightness | Each Razer port, and **General** in the Razer section for every port at once | Scales the colors that the mirror sends to the port. |
 | Sound reaction, detection, sensitivity, band, Fade | Under the screen | See [Sound reaction](#sound-reaction). |

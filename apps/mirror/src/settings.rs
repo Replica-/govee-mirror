@@ -86,6 +86,15 @@ pub struct DeviceSettings {
     pub gradient: bool,
 }
 
+/// A Govee light that answered a scan, kept so that the next scan asks its
+/// address directly. Its settings stay keyed by the same MAC.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Light {
+    pub ip: std::net::IpAddr,
+    pub sku: String,
+    pub name: String,
+}
+
 /// What the mirror does to the colors of one light, in percent of full scale.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
@@ -136,6 +145,9 @@ pub struct Settings {
     /// Addresses of Govee lights that every scan also asks directly, for a
     /// network that drops the multicast scan.
     pub lan_hosts: Vec<std::net::IpAddr>,
+    /// Each Govee light that a scan found, by its MAC. A move to a new
+    /// address replaces the old one.
+    pub lights: BTreeMap<String, Light>,
     /// Switch the sound output with the Razer headset.
     pub headset: crate::razer::headset::Settings,
     /// How far each color moves from grey, 1 for none. Averaging a patch of
@@ -167,6 +179,7 @@ impl Default for Settings {
             mirror_on_launch: false,
             razer_leds: [0; crate::razer::protocol::PORTS],
             lan_hosts: Vec::new(),
+            lights: BTreeMap::new(),
             headset: crate::razer::headset::Settings::default(),
             saturation: 1.3,
             source: Source::Screen,
@@ -186,6 +199,16 @@ impl Settings {
             .map(|dir| PathBuf::from(dir).join("govee-toolkit"))
             .unwrap_or_default()
             .join("mirror.json")
+    }
+
+    /// The typed addresses and the address of each found light: what every
+    /// scan asks directly.
+    pub fn hosts(&self) -> Vec<std::net::IpAddr> {
+        let mut hosts = self.lan_hosts.clone();
+        hosts.extend(self.lights.values().map(|light| light.ip));
+        hosts.sort_unstable();
+        hosts.dedup();
+        hosts
     }
 
     /// Give `assignment.target` the segment in `cell`, in place of the one it

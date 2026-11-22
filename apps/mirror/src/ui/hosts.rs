@@ -1,16 +1,63 @@
 //! The light addresses: lights that every scan asks directly, for a network
 //! that drops the multicast scan. The field that adds one sits beside the
-//! Scan button; the list sits in Govee General.
+//! Scan button. The list sits in Govee General, with each light that a scan
+//! found and the address it answered at.
 
 use std::net::IpAddr;
 
 use eframe::egui::{self, Color32, RichText, Ui};
 
+use crate::engine::Status;
 use crate::settings::Settings;
 
-/// The saved addresses, each with its Remove button. Answers whether the
-/// settings changed.
-pub fn list(ui: &mut Ui, settings: &mut Settings) -> bool {
+/// The saved lights and addresses, each with its button to drop it. Answers
+/// whether the settings changed.
+pub fn list(ui: &mut Ui, status: &Status, settings: &mut Settings) -> bool {
+    let changed = lights(ui, status, settings);
+    addresses(ui, settings) || changed
+}
+
+/// Each light that a scan found. A light that the last scan missed keeps its
+/// settings, and the next scan asks its address.
+fn lights(ui: &mut Ui, status: &Status, settings: &mut Settings) -> bool {
+    if settings.lights.is_empty() {
+        return false;
+    }
+    ui.add_space(4.0);
+    ui.label(RichText::new("Saved lights").strong());
+    ui.label(
+        RichText::new(
+            "Each scan asks these addresses directly. A light keeps its settings while it is away.",
+        )
+        .weak(),
+    );
+    let mut forget = None;
+    for (id, light) in &settings.lights {
+        let here = status.targets.iter().any(|t| &t.id == id);
+        ui.horizontal(|ui| {
+            ui.label(RichText::new(light.ip.to_string()).monospace());
+            ui.label(&light.name);
+            if !here && status.busy.is_none() {
+                ui.label(RichText::new("not found").color(Color32::LIGHT_RED))
+                    .on_hover_text("The last scan did not reach this light");
+            }
+            if ui
+                .small_button("Forget")
+                .on_hover_text("Stop asking this address. The light's settings stay.")
+                .clicked()
+            {
+                forget = Some(id.clone());
+            }
+        });
+    }
+    let Some(id) = forget else {
+        return false;
+    };
+    settings.lights.remove(&id);
+    true
+}
+
+fn addresses(ui: &mut Ui, settings: &mut Settings) -> bool {
     ui.add_space(4.0);
     ui.label(RichText::new("Light addresses").strong());
     if settings.lan_hosts.is_empty() {

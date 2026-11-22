@@ -66,7 +66,7 @@ pub fn show(
             brands::general(ui, brand, |ui| match brand {
                 Brand::Govee => {
                     commands.extend(brands::govee(ui, status, controls));
-                    changed |= hosts::list(ui, settings);
+                    changed |= hosts::list(ui, status, settings);
                 }
                 Brand::Razer => {
                     changed |= brands::razer(ui, status, settings);

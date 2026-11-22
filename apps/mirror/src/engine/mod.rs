@@ -115,7 +115,7 @@ async fn run(
     repaint: Box<dyn Fn() + Send + Sync>,
 ) {
     sound::lock(&sound).settings = settings.sound.clone();
-    let govee = match scan::start_sdk(&settings.lan_hosts).await {
+    let govee = match scan::start_sdk(&settings.hosts()).await {
         Ok(govee) => govee,
         Err(error) => {
             lock(&status).problems = vec![format!("The SDK did not start: {}", explain(&error))];
@@ -185,7 +185,7 @@ impl Context {
             Command::Highlight(id, segment) => self.highlight(id, segment).await,
             Command::Quit(_) => {}
             Command::Settings(settings) => {
-                let hosts = self.settings.lan_hosts != settings.lan_hosts;
+                let hosts = self.settings.hosts() != settings.hosts();
                 let razer = self.settings.razer_leds != settings.razer_leds;
                 let rebuild = self.settings.grid != settings.grid
                     || self.settings.assignments != settings.assignments

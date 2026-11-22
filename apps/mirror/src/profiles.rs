@@ -37,6 +37,8 @@ pub struct Library {
     #[serde(default)]
     pub lan_hosts: Vec<std::net::IpAddr>,
     #[serde(default)]
+    pub lights: std::collections::BTreeMap<String, crate::settings::Light>,
+    #[serde(default)]
     pub headset: headset::Settings,
 }
 
@@ -53,6 +55,7 @@ impl Library {
             mirror_on_launch: settings.mirror_on_launch,
             razer_leds: settings.razer_leds,
             lan_hosts: settings.lan_hosts.clone(),
+            lights: settings.lights.clone(),
             headset: settings.headset.clone(),
             profiles: vec![Profile {
                 name: "Default".to_owned(),
@@ -121,6 +124,7 @@ impl Library {
         settings.mirror_on_launch = self.mirror_on_launch;
         settings.razer_leds = self.razer_leds;
         settings.lan_hosts.clone_from(&self.lan_hosts);
+        settings.lights.clone_from(&self.lights);
         settings.headset = self.headset.clone();
         settings
     }
@@ -131,6 +135,7 @@ impl Library {
         self.mirror_on_launch = settings.mirror_on_launch;
         self.razer_leds = settings.razer_leds;
         self.lan_hosts.clone_from(&settings.lan_hosts);
+        self.lights.clone_from(&settings.lights);
         self.headset = settings.headset.clone();
         self.profiles[self.active].settings = settings.clone();
     }

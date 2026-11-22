@@ -1,13 +1,13 @@
 //! What the window sends the engine, and what the engine reports back.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use tokio::sync::oneshot;
 
 use super::targets::Target;
 use super::writer::Stats;
-use crate::settings::Settings;
+use crate::settings::{Light, Settings};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Control {
@@ -43,6 +43,9 @@ pub struct Status {
     pub stats: HashMap<String, Stats>,
     /// The last failure of a command, per target.
     pub messages: HashMap<String, String>,
+    /// The lights the last scan found, by MAC, for the window to save. The
+    /// window takes them.
+    pub found: BTreeMap<String, Light>,
 }
 
 pub type Shared = Arc<Mutex<Status>>;

@@ -151,10 +151,17 @@ impl eframe::App for App {
             self.settings = settings;
         }
         let (capture_error, screens) = self.refresh_preview(&ctx);
+        let found = std::mem::take(&mut engine::lock(&self.engine.status).found);
         let status_handle = self.engine.status.clone();
         let status = engine::lock(&status_handle);
         let mut commands = Vec::new();
         let mut changed = false;
+        for (id, light) in found {
+            if self.settings.lights.get(&id) != Some(&light) {
+                self.settings.lights.insert(id, light);
+                changed = true;
+            }
+        }
         let mut problem = None;
 
         // The rows follow the columns, so that every cell is square.

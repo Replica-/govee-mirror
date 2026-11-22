@@ -5,6 +5,19 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+## [0.5.0] — 2026-11-23
+
+### Added
+
+- **Saved lights**: the app keeps the address of each Govee light that a
+  scan finds, with its name and SKU, in `mirror.json`. Each later scan asks
+  those addresses directly, so a light that the multicast scan misses still
+  comes back. A light that moves to a new address replaces the old one.
+- The list in Govee **General** shows each saved light, marks the ones that
+  the last scan did not reach, and has **Forget** to stop asking one. The
+  settings of a light stay keyed by its MAC, so a light that comes back
+  keeps them.
+
 ## [0.4.0] — 2026-11-23
 
 ### Added

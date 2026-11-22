@@ -1,10 +1,16 @@
 //! The scan: Govee lights over `lan`, and the ports of a Razer ARGB controller.
 
-use std::net::IpAddr;
+use std::collections::BTreeMap;
+use std::net::{IpAddr, SocketAddr};
+use std::time::Duration;
 
-use govee_toolkit::{Config, Govee};
+use govee_toolkit::transport::Event as TransportEvent;
+use govee_toolkit::{Config, Event, Govee, Mode};
+use tokio::sync::broadcast::Receiver;
+use tokio::sync::broadcast::error::RecvError;
 
 use super::{Context, explain, lock, targets};
+use crate::settings::Light;
 
 /// Start the SDK from the configuration file, with `hosts` added to what
 /// every `lan` scan asks directly.
@@ -22,7 +28,7 @@ impl Context {
         let running = self.mirror.is_some();
         self.stop().await;
         let _ = self.govee.shutdown().await;
-        match start_sdk(&self.settings.lan_hosts).await {
+        match start_sdk(&self.settings.hosts()).await {
             Ok(govee) => self.govee = govee,
             Err(error) => {
                 lock(&self.status).problems =
@@ -38,7 +44,15 @@ impl Context {
 
     pub(super) async fn scan(&mut self) {
         self.busy(Some("Scanning"));
+        let mut events = self.govee.events();
         let result = targets::scan(&self.govee).await;
+        let addresses = match &result {
+            Ok(targets) => {
+                let ids: Vec<&str> = targets.iter().map(|t| t.id.as_str()).collect();
+                answered(&mut events, &ids).await
+            }
+            Err(_) => BTreeMap::new(),
+        };
         let razer = crate::razer::present();
         let synapse = razer && crate::razer::synapse_running();
         let mut status = lock(&self.status);
@@ -51,6 +65,22 @@ impl Context {
                 } else {
                     Vec::new()
                 };
+                // The engine keeps them too, so that the settings the window
+                // sends back hold the same addresses and start no new SDK.
+                for target in &targets {
+                    let Some(&ip) = addresses.get(&target.id) else {
+                        continue;
+                    };
+                    let light = Light {
+                        ip,
+                        sku: target.sku.clone(),
+                        name: target.name.clone(),
+                    };
+                    self.settings
+                        .lights
+                        .insert(target.id.clone(), light.clone());
+                    status.found.insert(target.id.clone(), light);
+                }
                 status.targets = targets;
             }
             Err(error) => status.problems = vec![format!("The scan failed: {}", explain(&error))],
@@ -65,3 +95,31 @@ impl Context {
             .extend(targets::razer(&self.settings.razer_leds));
     }
 }
+
+/// The address of each light in `wanted` that answered over `lan`, by MAC,
+/// from the events of the scan. A `lan` endpoint is `ip:port`. The SDK can
+/// forward an answer after the scan returns, so a missing one gets
+/// [`LATE`] to arrive.
+async fn answered(events: &mut Receiver<Event>, wanted: &[&str]) -> BTreeMap<String, IpAddr> {
+    let mut addresses = BTreeMap::new();
+    let deadline = tokio::time::Instant::now() + LATE;
+    while wanted.iter().any(|id| !addresses.contains_key(*id)) {
+        let event = match tokio::time::timeout_at(deadline, events.recv()).await {
+            Ok(Ok(event)) => event,
+            Ok(Err(RecvError::Lagged(_))) => continue,
+            Ok(Err(RecvError::Closed)) | Err(_) => break,
+        };
+        if let Event::Transport(TransportEvent::Discovered {
+            mode: Mode::Lan,
+            device,
+            ..
+        }) = event
+            && let Ok(endpoint) = device.endpoint.parse::<SocketAddr>()
+        {
+            addresses.insert(device.id.as_str().to_owned(), endpoint.ip());
+        }
+    }
+    addresses
+}
+
+const LATE: Duration = Duration::from_millis(250);
