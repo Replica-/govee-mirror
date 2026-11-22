@@ -16,6 +16,9 @@ over USB, with no Synapse.
 - **Razer Wired ARGB Controller.** Each port is a light, and each LED a
   segment. It runs over USB with Synapse closed, and Exit hands the LEDs
   back to the controller's own effect.
+- **Razer headset sound switch.** Turn on the BlackShark V3 Pro and Windows
+  plays sound on it. Turn it off and sound goes back to your speakers. It
+  reads the USB dongle, so Synapse can stay open.
 - **Profiles.** Keep several setups, and link a program to one: while that
   program runs, the app switches to its profile. The process list is read
   every 5 seconds, and only while a profile names a program.
@@ -47,6 +50,8 @@ over USB, with no Synapse.
 ![The lights and their segments](apps/mirror/docs/lights.png)
 
 ![Two light bars, one on each edge of the screen](apps/mirror/docs/segments.png)
+
+![The headset sound switch in the Razer section](apps/mirror/docs/headset.png)
 
 ## Get it
 

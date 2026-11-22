@@ -2,6 +2,7 @@
 //! one cell to one segment.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod audio;
 mod capture;
 mod engine;
 mod mapping;

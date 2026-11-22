@@ -34,8 +34,17 @@ tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"
 tray-icon = "0.26"
 # The start-with-Windows entry, through a safe API.
 winreg = "0.56"
+# The `interface` macro, for the `IPolicyConfig` declaration.
+windows-core = "0.62"
 windows = { version = "0.62", features = [
   "Win32_Foundation",
+  # The sound outputs, for the headset switch.
+  "Win32_Devices_FunctionDiscovery",
+  "Win32_Media_Audio",
+  "Win32_System_Com",
+  "Win32_System_Com_StructuredStorage",
+  "Win32_System_Variant",
+  "Win32_UI_Shell_PropertiesSystem",
   "Win32_Graphics_Direct3D",
   "Win32_Graphics_Direct3D11",
   "Win32_Graphics_Dxgi",

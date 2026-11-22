@@ -88,7 +88,8 @@ each light that paints it, so the other lights in the box keep theirs.
 
 A profile holds a whole setup: the screen, the grid, the cells, each light's
 resolution and blend, the source, and the saturation, smoothing and rate.
-The Razer port counts and **Mirror on launch** are shared by every profile.
+The Razer port counts, the headset switch and **Mirror on launch** are
+shared by every profile.
 
 Above the grid, pick a profile, or press **New** for a copy of this one. A profile can name a program, such as `game.exe`: while it runs,
 the app switches to that profile, and it switches back to the one you picked
@@ -107,6 +108,33 @@ and the app warns after a scan when it runs.
   groups the LEDs into fewer segments.
 - The LEDs follow the mirror while it runs. Stopping the mirror, or Exit,
   hands them back to the controller's own effect.
+
+## Razer headset sound switch
+
+The BlackShark V3 Pro has a card of its own in the **Razer** section. With
+the switch on, Windows plays sound on the headset while it is on, and on
+another output while it is off.
+
+![The headset card in the Razer section](docs/headset.png)
+
+- Unfold the **BlackShark V3 Pro** card and turn on **Switch the sound output
+  with the headset**.
+- **On** is the output that plays while the headset is on, such as
+  "Speakers (BlackShark V3 Pro - Game)".
+- **Off** is the output that plays while it is off. It starts as the output
+  that played when you turned the switch on.
+
+The USB dongle stays plugged in, so Windows keeps the headset's outputs
+listed while the headset is off. The app reads the connection from the
+dongle instead. Synapse can stay open.
+
+- The switch applies at the next time the headset turns on or off. The
+  dongle reports a change, not the state, so a headset that is already on
+  when the app starts keeps the current output.
+- When the headset turns off, the app switches back only if the headset's
+  output still plays. An output that you picked by hand meanwhile stays.
+- The switch sets the default output for every role: playback and
+  communications.
 
 ## Settings
 

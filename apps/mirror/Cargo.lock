@@ -1005,6 +1005,7 @@ dependencies = [
  "tokio",
  "tray-icon",
  "windows",
+ "windows-core",
  "winreg",
 ]
 

@@ -107,6 +107,8 @@ pub struct Settings {
     /// with 0 is not a light. The controller keeps its own counts, set in
     /// Synapse, and these must match them.
     pub razer_leds: [usize; crate::razer::protocol::PORTS],
+    /// Switch the sound output with the Razer headset.
+    pub headset: crate::razer::headset::Settings,
     /// How far each color moves from grey, 1 for none. Averaging a patch of
     /// screen pulls colors toward grey, and this pushes them back.
     pub saturation: f32,
@@ -130,6 +132,7 @@ impl Default for Settings {
             devices: BTreeMap::new(),
             mirror_on_launch: false,
             razer_leds: [0; crate::razer::protocol::PORTS],
+            headset: crate::razer::headset::Settings::default(),
             saturation: 1.3,
             source: Source::Screen,
             moving: true,

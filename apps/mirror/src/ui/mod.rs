@@ -5,6 +5,7 @@ mod brands;
 mod brush;
 mod devices;
 mod grid;
+mod headset;
 mod palette;
 mod profiles;
 mod shell;
@@ -18,7 +19,7 @@ use crate::engine::{self, Command, Engine};
 use crate::mapping::square_rows;
 use crate::pattern;
 use crate::settings::Settings;
-use crate::{startup, usage};
+use crate::{razer, startup, usage};
 
 pub use self::brush::{Brush, Tool, segment_color, text_on};
 pub use self::profiles::Profiles;
@@ -42,6 +43,7 @@ pub struct App {
     shown: u64,
     brush: Brush,
     controls: devices::Controls,
+    headset: headset::Panel,
     shell: Shell,
     profiles: Profiles,
     usage: usage::Shared,
@@ -60,6 +62,9 @@ impl App {
         profiles: Profiles,
     ) -> Self {
         let usage = usage::spawn(std::sync::Arc::clone(&capture));
+        let headset = headset::Panel::new(razer::headset::spawn(std::sync::Arc::clone(
+            &profiles.library,
+        )));
         Self {
             runtime,
             engine,
@@ -71,6 +76,7 @@ impl App {
             shown: 0,
             brush: Brush::default(),
             controls: devices::Controls::default(),
+            headset,
             shell,
             profiles,
             usage,
@@ -191,6 +197,7 @@ impl eframe::App for App {
                         &mut self.settings,
                         &mut self.brush,
                         &mut self.controls,
+                        &mut self.headset,
                     );
                     commands.extend(sent);
                     changed |= edited;

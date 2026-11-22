@@ -9,6 +9,7 @@ use std::{fs, io};
 
 use serde::{Deserialize, Serialize};
 
+use crate::razer::headset;
 use crate::razer::protocol::PORTS;
 use crate::settings::Settings;
 
@@ -33,6 +34,8 @@ pub struct Library {
     /// Shared by every profile: they describe the hardware and the start.
     pub mirror_on_launch: bool,
     pub razer_leds: [usize; PORTS],
+    #[serde(default)]
+    pub headset: headset::Settings,
 }
 
 impl Default for Library {
@@ -47,6 +50,7 @@ impl Library {
         Self {
             mirror_on_launch: settings.mirror_on_launch,
             razer_leds: settings.razer_leds,
+            headset: settings.headset.clone(),
             profiles: vec![Profile {
                 name: "Default".to_owned(),
                 process: None,
@@ -113,6 +117,7 @@ impl Library {
         let mut settings = self.profiles[self.active].settings.clone();
         settings.mirror_on_launch = self.mirror_on_launch;
         settings.razer_leds = self.razer_leds;
+        settings.headset = self.headset.clone();
         settings
     }
 
@@ -121,6 +126,7 @@ impl Library {
     pub fn store(&mut self, settings: &Settings) {
         self.mirror_on_launch = settings.mirror_on_launch;
         self.razer_leds = settings.razer_leds;
+        self.headset = settings.headset.clone();
         self.profiles[self.active].settings = settings.clone();
     }
 

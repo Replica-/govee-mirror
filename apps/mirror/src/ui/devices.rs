@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use eframe::egui::{self, Color32, RichText, Sense, Ui, UiBuilder};
 
 use super::brands::{self, Brand};
+use super::headset::Panel;
 use crate::engine::{Command, Control, Status, Target};
 use crate::settings::{Resolution, Settings};
 use crate::ui::Brush;
@@ -36,6 +37,7 @@ pub fn show(
     settings: &mut Settings,
     brush: &mut Brush,
     controls: &mut Controls,
+    headset: &mut Panel,
 ) -> (Vec<Command>, bool) {
     let mut commands = Vec::new();
     let mut changed = false;
@@ -48,7 +50,8 @@ pub fn show(
             .iter()
             .filter(|t| Brand::of(t) == brand)
             .collect();
-        if brand == Brand::Razer && lights.is_empty() && !status.razer {
+        let headset_shown = headset.present() || settings.headset.enabled;
+        if brand == Brand::Razer && lights.is_empty() && !status.razer && !headset_shown {
             continue;
         }
         brands::section(ui, brand, lights.len(), |ui| {
@@ -62,6 +65,9 @@ pub fn show(
             for target in lights {
                 changed |= card(ui, status, settings, brush, controls, target, &mut commands);
                 ui.add_space(4.0);
+            }
+            if brand == Brand::Razer && headset_shown {
+                changed |= headset.show(ui, settings);
             }
         });
         ui.add_space(8.0);

@@ -7,6 +7,13 @@ release that carries `govee-mirror-pc.exe`. The policy is
 
 ## [Unreleased]
 
+### Added
+
+- A card for the Razer BlackShark V3 Pro headset in the Razer section. Its
+  switch makes Windows play sound on the headset while it is on, and on a
+  picked output while it is off. The app reads the connection from the USB
+  dongle, so it acts at the next time the headset turns on or off.
+
 ### Changed
 
 - The window and the tray show the name "Govee Razer Mirror Windows 11 PC".
