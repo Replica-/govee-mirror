@@ -13,6 +13,9 @@ release that carries `govee-mirror-pc.exe`. The policy is
   switch makes Windows play sound on the headset while it is on, and on a
   picked output while it is off. The app reads the connection from the USB
   dongle, so it acts at the next time the headset turns on or off.
+- A Windows notification at each headset switch, "Headset on" or "Headset
+  off", with the output that now plays. A checkbox in the headset card turns
+  it off.
 
 ### Changed
 

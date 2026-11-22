@@ -123,6 +123,9 @@ another output while it is off.
   "Speakers (BlackShark V3 Pro - Game)".
 - **Off** is the output that plays while it is off. It starts as the output
   that played when you turned the switch on.
+- **Show a notification at each switch** shows a Windows notification,
+  "Headset on" or "Headset off", with the output that now plays. It is on
+  by default.
 
 The USB dongle stays plugged in, so Windows keeps the headset's outputs
 listed while the headset is off. The app reads the connection from the

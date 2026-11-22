@@ -17,7 +17,8 @@ over USB, with no Synapse.
   segment. It runs over USB with Synapse closed, and Exit hands the LEDs
   back to the controller's own effect.
 - **Razer headset sound switch.** Turn on the BlackShark V3 Pro and Windows
-  plays sound on it. Turn it off and sound goes back to your speakers. It
+  plays sound on it. Turn it off and sound goes back to your speakers. A
+  Windows notification says which output plays, and you can turn it off. It
   reads the USB dongle, so Synapse can stay open.
 - **Profiles.** Keep several setups, and link a program to one: while that
   program runs, the app switches to its profile. The process list is read

@@ -119,6 +119,9 @@ impl Panel {
         if !switch.enabled {
             return changed;
         }
+        changed |= ui
+            .checkbox(&mut switch.notify, "Show a notification at each switch")
+            .changed();
         self.refresh();
         egui::Grid::new("headset-outputs")
             .num_columns(2)

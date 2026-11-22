@@ -6,6 +6,7 @@ mod audio;
 mod capture;
 mod engine;
 mod mapping;
+mod notify;
 mod pattern;
 mod process;
 mod profiles;

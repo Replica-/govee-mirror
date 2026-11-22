@@ -13,8 +13,8 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 
-use crate::audio;
 use crate::profiles::Library;
+use crate::{audio, notify};
 
 /// The USB dongle of the BlackShark V3 Pro.
 const PRODUCT: u16 = 0x0577;
@@ -31,7 +31,7 @@ const READ: Duration = Duration::from_secs(1);
 const RETRY: Duration = Duration::from_secs(5);
 
 /// The headset switch. It applies to every profile.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     pub enabled: bool,
@@ -39,6 +39,19 @@ pub struct Settings {
     pub output: Option<String>,
     /// The endpoint ID of the output that plays while the headset is off.
     pub back_to: Option<String>,
+    /// Show a Windows notification at each switch.
+    pub notify: bool,
+}
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            output: None,
+            back_to: None,
+            notify: true,
+        }
+    }
 }
 
 #[derive(Debug, Default)]
@@ -74,8 +87,8 @@ pub fn parse(report: &[u8]) -> Option<bool> {
 }
 
 /// Start the thread. It runs for the life of the process, and opens the
-/// dongle only while the switch is on.
-/// The window reads the state on its next redraw.
+/// dongle only while the switch is on. The window reads the state on its
+/// next redraw.
 pub fn spawn(library: Arc<Mutex<Library>>) -> Shared {
     let shared = Shared::default();
     let state = Arc::clone(&shared);
@@ -146,6 +159,12 @@ fn listen(device: &hidapi::HidDevice, library: &Mutex<Library>, state: &Shared) 
             continue;
         }
         let outcome = switch(&settings, on);
+        if settings.notify
+            && let Some(outcome) = &outcome
+        {
+            let title = if on { "Headset on" } else { "Headset off" };
+            let _ = notify::show(title, outcome.as_ref().unwrap_or_else(|e| e));
+        }
         let mut state = lock(state);
         state.connected = Some(on);
         state.failed = matches!(outcome, Some(Err(_)));

@@ -37,6 +37,9 @@ winreg = "0.56"
 # The `interface` macro, for the `IPolicyConfig` declaration.
 windows-core = "0.62"
 windows = { version = "0.62", features = [
+  # The notification at a headset switch.
+  "Data_Xml_Dom",
+  "UI_Notifications",
   "Win32_Foundation",
   # The sound outputs, for the headset switch.
   "Win32_Devices_FunctionDiscovery",
