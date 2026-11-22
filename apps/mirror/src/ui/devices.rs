@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use eframe::egui::{self, Color32, RichText, Sense, Ui};
+use eframe::egui::{self, Color32, RichText, Sense, Ui, UiBuilder};
 
 use crate::engine::{Command, Control, Status, Target};
 use crate::settings::{Resolution, Settings};
@@ -38,9 +38,10 @@ pub fn show(
         } else {
             egui::Stroke::new(1.0, Color32::from_gray(70))
         };
-        let card = egui::Frame::group(ui.style())
-            .stroke(stroke)
-            .show(ui, |ui| {
+        // The sense goes on the scope, under the controls: a sense added after
+        // them sits on top and takes their clicks.
+        let card = ui.scope_builder(UiBuilder::new().sense(Sense::click()), |ui| {
+            egui::Frame::group(ui.style()).stroke(stroke).show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.label(RichText::new(&target.name).strong());
                 let zones = settings.zones(target);
@@ -68,7 +69,8 @@ pub fn show(
                     };
                 }
             });
-        if card.response.interact(Sense::click()).clicked() && !chosen {
+        });
+        if card.response.clicked() && !chosen {
             brush.target = Some(target.id.clone());
             brush.segment = 0;
         }

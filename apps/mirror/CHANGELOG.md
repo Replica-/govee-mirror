@@ -5,6 +5,16 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+### Changed
+
+- With one segment per LED, the blend of a Razer port gives each LED the
+  mean of its color and the colors of the LEDs next to it.
+
+### Fixed
+
+- The controls on a light's card take their clicks. The card took the click
+  for itself, so a checkbox, a list or a button there did nothing.
+
 ## [0.2.0] — 2026-11-22
 
 ### Added

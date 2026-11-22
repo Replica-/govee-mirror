@@ -204,10 +204,14 @@ fn run(state: &Mutex<State>, stop: &AtomicBool, opened: &mpsc::Sender<Result<(),
 }
 
 /// Spread `segments` over `leds` LEDs, each segment over an even run. With
-/// `blend`, the colors fade from one segment's center to the next.
+/// `blend`, the colors fade from one segment's center to the next. With one
+/// segment per LED, `blend` gives each LED the mean of it and its neighbours.
 pub fn spread(segments: &[[u8; 3]], leds: usize, blend: bool) -> Vec<[u8; 3]> {
-    if segments.is_empty() || segments.len() == leds {
+    if segments.is_empty() || (segments.len() == leds && !blend) {
         return segments.to_vec();
+    }
+    if segments.len() == leds {
+        return smooth(segments);
     }
     let count = segments.len();
     (0..leds)
@@ -226,6 +230,19 @@ pub fn spread(segments: &[[u8; 3]], leds: usize, blend: bool) -> Vec<[u8; 3]> {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             std::array::from_fn(|i| {
                 (f32::from(a[i]) * (1.0 - t) + f32::from(b[i]) * t).round() as u8
+            })
+        })
+        .collect()
+}
+
+fn smooth(segments: &[[u8; 3]]) -> Vec<[u8; 3]> {
+    (0..segments.len())
+        .map(|led| {
+            let near = &segments[led.saturating_sub(1)..(led + 2).min(segments.len())];
+            #[allow(clippy::cast_possible_truncation)]
+            std::array::from_fn(|i| {
+                let sum: usize = near.iter().map(|c| usize::from(c[i])).sum();
+                ((sum + near.len() / 2) / near.len()) as u8
             })
         })
         .collect()
@@ -256,5 +273,15 @@ mod tests {
         assert_eq!(leds[0], [0, 0, 0]);
         assert_eq!(leds[3], [200, 0, 0]);
         assert!(leds[1][0] > 0 && leds[1][0] < leds[2][0] && leds[2][0] < 200);
+    }
+
+    #[test]
+    fn a_blend_at_one_segment_per_led_averages_the_neighbours() {
+        let segments = [[0, 0, 0], [90, 0, 0], [0, 0, 0], [0, 0, 30]];
+        assert_eq!(spread(&segments, 4, false), segments.to_vec());
+        assert_eq!(
+            spread(&segments, 4, true),
+            vec![[45, 0, 0], [30, 0, 0], [30, 0, 10], [0, 0, 15]]
+        );
     }
 }
