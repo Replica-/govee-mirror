@@ -12,6 +12,7 @@ mod process;
 mod profiles;
 mod razer;
 mod settings;
+mod sound;
 mod startup;
 mod tray;
 mod ui;

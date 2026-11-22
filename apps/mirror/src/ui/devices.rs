@@ -7,6 +7,8 @@ use eframe::egui::{self, Color32, RichText, Sense, Ui, UiBuilder};
 
 use super::brands::{self, Brand};
 use super::headset::Panel;
+use super::hosts;
+use super::levels;
 use crate::engine::{Command, Control, Status, Target};
 use crate::settings::{Resolution, Settings};
 use crate::ui::Brush;
@@ -17,6 +19,10 @@ pub struct Controls {
     pub(super) all_color: [u8; 3],
     /// Percent of each light's own range.
     pub(super) all_brightness: u8,
+    /// Percent, for every Razer port.
+    pub(super) all_razer: u8,
+    /// The light address being typed.
+    pub(super) host: String,
 }
 
 impl Default for Controls {
@@ -26,6 +32,8 @@ impl Default for Controls {
             color: HashMap::new(),
             all_color: [255; 3],
             all_brightness: 100,
+            all_razer: 100,
+            host: String::new(),
         }
     }
 }
@@ -56,8 +64,14 @@ pub fn show(
         }
         brands::section(ui, brand, lights.len(), |ui| {
             brands::general(ui, brand, |ui| match brand {
-                Brand::Govee => commands.extend(brands::govee(ui, status, controls)),
-                Brand::Razer => changed |= brands::razer(ui, status, settings),
+                Brand::Govee => {
+                    commands.extend(brands::govee(ui, status, controls));
+                    changed |= hosts::list(ui, settings);
+                }
+                Brand::Razer => {
+                    changed |= brands::razer(ui, status, settings);
+                    changed |= levels::razer_all(ui, status, settings, controls);
+                }
             });
             if lights.is_empty() && status.busy.is_none() {
                 ui.label(RichText::new("No light yet. Press Scan.").weak());
@@ -101,7 +115,7 @@ fn card(
             let id = ui.make_persistent_id(("light", &target.id));
             egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, false)
                 .show_header(ui, |ui| {
-                    commands.extend(header(ui, status, target));
+                    commands.extend(header(ui, status, settings, target));
                 })
                 .body(|ui| {
                     let zones = settings.zones(target);
@@ -117,9 +131,7 @@ fn card(
                     } else {
                         commands.extend(govee_controls(ui, status, target, controls));
                     }
-                    if let Some(stats) = status.stats.get(&target.id) {
-                        ui.label(RichText::new(format!("{} frames sent", stats.sent)).weak());
-                    }
+                    changed |= levels::light(ui, settings, target);
                 });
             if let Some(error) = problem(status, &target.id) {
                 ui.colored_label(Color32::LIGHT_RED, error);
@@ -142,8 +154,9 @@ fn problem<'a>(status: &'a Status, id: &str) -> Option<&'a str> {
         .map(String::as_str)
 }
 
-/// A dot for the state, the name, and the power buttons.
-fn header(ui: &mut Ui, status: &Status, target: &Target) -> Vec<Command> {
+/// A dot for the state, a tag where the light reacts to sound, the name,
+/// and the power buttons.
+fn header(ui: &mut Ui, status: &Status, settings: &Settings, target: &Target) -> Vec<Command> {
     let mut commands = Vec::new();
     let dot = if problem(status, &target.id).is_some() {
         Color32::from_rgb(220, 80, 80)
@@ -166,6 +179,10 @@ fn header(ui: &mut Ui, status: &Status, target: &Target) -> Vec<Command> {
         |ui| {
             let (rect, _) = ui.allocate_exact_size(egui::vec2(10.0, 10.0), Sense::hover());
             ui.painter().circle_filled(rect.center(), 4.0, dot);
+            // Before the name, which takes the room that is left.
+            if settings.sound.enabled && settings.levels(&target.id).react {
+                levels::badge(ui);
+            }
             // A selectable label takes the click that chooses the card.
             ui.add(
                 egui::Label::new(RichText::new(&target.name).strong())

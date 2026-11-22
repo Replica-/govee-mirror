@@ -6,6 +6,7 @@
 //! waits on the engine.
 
 mod explain;
+mod frame;
 mod scan;
 mod status;
 mod targets;
@@ -25,13 +26,14 @@ pub use self::status::{Command, Control, Shared, Status, lock};
 pub use self::targets::Target;
 use self::writer::Writer;
 use crate::capture;
-use crate::mapping::{Sources, plan, render};
-use crate::pattern;
+use crate::mapping::{Sources, plan};
 use crate::settings::Settings;
+use crate::{pattern, sound};
 
 pub struct Engine {
     commands: UnboundedSender<Command>,
     pub status: Shared,
+    pub sound: sound::Shared,
 }
 
 impl Engine {
@@ -44,15 +46,20 @@ impl Engine {
     ) -> Self {
         let (commands, receiver) = unbounded_channel();
         let status = Shared::default();
+        let sound = sound::spawn();
         runtime.spawn(run(
             receiver,
             capture,
             settings,
-            Arc::clone(&status),
+            (Arc::clone(&status), Arc::clone(&sound)),
             Box::new(repaint),
         ));
         let _ = commands.send(Command::Scan);
-        Self { commands, status }
+        Self {
+            commands,
+            status,
+            sound,
+        }
     }
 
     pub fn send(&self, command: Command) {
@@ -87,6 +94,7 @@ struct Mirror {
     reported: Instant,
     /// When the mirror started, the clock of the animation.
     started: Instant,
+    pulse: sound::Pulse,
 }
 
 struct Context {
@@ -94,6 +102,7 @@ struct Context {
     capture: capture::Shared,
     settings: Settings,
     status: Shared,
+    sound: sound::Shared,
     repaint: Box<dyn Fn() + Send + Sync>,
     mirror: Option<Mirror>,
 }
@@ -102,10 +111,11 @@ async fn run(
     mut commands: UnboundedReceiver<Command>,
     capture: capture::Shared,
     settings: Settings,
-    status: Shared,
+    (status, sound): (Shared, sound::Shared),
     repaint: Box<dyn Fn() + Send + Sync>,
 ) {
-    let govee = match Govee::start_or_defaults(None, None).await {
+    sound::lock(&sound).settings = settings.sound.clone();
+    let govee = match scan::start_sdk(&settings.lan_hosts).await {
         Ok(govee) => govee,
         Err(error) => {
             lock(&status).problems = vec![format!("The SDK did not start: {}", explain(&error))];
@@ -121,6 +131,7 @@ async fn run(
         capture,
         settings,
         status,
+        sound,
         repaint,
         mirror: None,
     };
@@ -174,12 +185,14 @@ impl Context {
             Command::Highlight(id, segment) => self.highlight(id, segment).await,
             Command::Quit(_) => {}
             Command::Settings(settings) => {
+                let hosts = self.settings.lan_hosts != settings.lan_hosts;
                 let razer = self.settings.razer_leds != settings.razer_leds;
                 let rebuild = self.settings.grid != settings.grid
                     || self.settings.assignments != settings.assignments
                     || self.settings.devices != settings.devices
                     || razer;
                 self.settings = *settings;
+                sound::lock(&self.sound).settings = self.settings.sound.clone();
                 if razer {
                     let mut status = lock(&self.status);
                     status.targets.retain(|t| t.razer_port.is_none());
@@ -187,7 +200,9 @@ impl Context {
                         .targets
                         .extend(targets::razer(&self.settings.razer_leds));
                 }
-                if rebuild && self.mirror.is_some() {
+                if hosts {
+                    self.restart_sdk().await;
+                } else if rebuild && self.mirror.is_some() {
                     self.stop().await;
                     self.start().await;
                 }
@@ -263,6 +278,7 @@ impl Context {
             rendered: 0,
             reported: Instant::now(),
             started: Instant::now(),
+            pulse: sound::Pulse::default(),
         });
         let mut status = lock(&self.status);
         status.busy = None;
@@ -337,63 +353,5 @@ impl Context {
 
     fn message(&self, id: &str, text: String) {
         lock(&self.status).messages.insert(id.to_owned(), text);
-    }
-
-    fn frame(&mut self) {
-        let Some(mirror) = self.mirror.as_mut() else {
-            return;
-        };
-        let grid = self.settings.grid;
-        let seconds = if self.settings.moving {
-            mirror.started.elapsed().as_secs_f32()
-        } else {
-            0.0
-        };
-        let (source, speed) = (self.settings.source, self.settings.animation_speed);
-        let cells = pattern::draw(source, grid.cols, grid.rows, seconds, speed).or_else(|| {
-            let frame = capture::lock(&self.capture).frame.clone();
-            frame.map(|frame| frame.cells(grid.cols, grid.rows))
-        });
-        if let Some(cells) = cells {
-            let mut frames = render(
-                &mirror.plan,
-                &cells,
-                &mut mirror.state,
-                self.settings.smoothing,
-                self.settings.saturation,
-            );
-            if let Some((id, segment, started)) = &mirror.highlight {
-                match writer::blink(started.elapsed()) {
-                    Some(on) => {
-                        if let Some(colors) = frames.get_mut(id) {
-                            colors.fill([0; 3]);
-                            if let Some(color) = colors.get_mut(*segment).filter(|_| on) {
-                                *color = [255; 3];
-                            }
-                        }
-                    }
-                    None => mirror.highlight = None,
-                }
-            }
-            for (id, colors) in &frames {
-                if let Some(writer) = mirror.writers.get(id) {
-                    writer.write(&self.govee, id, colors);
-                }
-            }
-            mirror.rendered += 1;
-        }
-        if mirror.reported.elapsed() >= Duration::from_secs(1) {
-            let mut status = lock(&self.status);
-            status.fps = mirror.rendered;
-            status.stats = mirror
-                .writers
-                .iter()
-                .map(|(id, w)| (id.clone(), w.stats()))
-                .collect();
-            mirror.rendered = 0;
-            mirror.reported = Instant::now();
-            drop(status);
-            (self.repaint)();
-        }
     }
 }

@@ -13,7 +13,6 @@ use crate::razer::{self, Controller};
 /// What a writer reports once per second.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Stats {
-    pub sent: u64,
     pub error: Option<String>,
 }
 
@@ -212,14 +211,12 @@ impl Writer {
     pub fn stats(&self) -> Stats {
         match self {
             Self::Stream(stream) => Stats {
-                sent: stream.frames_sent(),
                 error: stream.error().map(|e| e.to_string()),
             },
             Self::Color(queue) => queue.lock().stats.clone(),
-            Self::Razer { controller, .. } => {
-                let (sent, error) = controller.stats();
-                Stats { sent, error }
-            }
+            Self::Razer { controller, .. } => Stats {
+                error: controller.error(),
+            },
         }
     }
 
@@ -275,10 +272,7 @@ impl ColorQueue {
                 };
                 let mut state = queue.lock();
                 match result {
-                    Ok(()) => {
-                        state.stats.sent += 1;
-                        state.stats.error = None;
-                    }
+                    Ok(()) => state.stats.error = None,
                     Err(error) => state.stats.error = Some(error.to_string()),
                 }
             }

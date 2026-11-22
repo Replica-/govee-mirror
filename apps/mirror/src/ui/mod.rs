@@ -6,9 +6,12 @@ mod brush;
 mod devices;
 mod grid;
 mod headset;
+mod hosts;
+mod levels;
 mod palette;
 mod profiles;
 mod shell;
+mod sound;
 
 use std::time::{Duration, Instant};
 
@@ -183,6 +186,7 @@ impl eframe::App for App {
                     {
                         commands.push(Command::Scan);
                     }
+                    changed |= hosts::field(ui, &mut self.settings, &mut self.controls.host);
                 });
                 for warning in &status.warnings {
                     ui.colored_label(Color32::YELLOW, warning);
@@ -214,6 +218,16 @@ impl eframe::App for App {
                     changed |= edited;
                 });
             });
+
+        egui::Panel::bottom("sound").show(ui, |ui| {
+            changed |= sound::show(
+                ui,
+                &mut self.settings,
+                &self.engine.sound,
+                status.running,
+                &status.targets,
+            );
+        });
 
         let seconds = if self.settings.moving {
             ctx.input(|i| i.time) as f32
@@ -255,9 +269,10 @@ impl eframe::App for App {
         if self.unsaved.is_some_and(|at| at.elapsed() >= SAVE_DELAY) {
             self.save();
         }
-        // A moving pattern changes on every frame; the screen preview needs
-        // fewer.
-        ctx.request_repaint_after(if moving { ANIMATION } else { PREVIEW });
+        // A moving pattern and the spectrum change on every frame; the screen
+        // preview needs fewer.
+        let animated = moving || self.settings.sound.enabled;
+        ctx.request_repaint_after(if animated { ANIMATION } else { PREVIEW });
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {

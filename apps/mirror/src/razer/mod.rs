@@ -27,7 +27,6 @@ const KEEP_ALIVE: Duration = Duration::from_millis(250);
 struct State {
     ports: [Vec<[u8; 3]>; PORTS],
     dirty: bool,
-    sent: u64,
     error: Option<String>,
 }
 
@@ -122,10 +121,9 @@ impl Controller {
         }
     }
 
-    /// Frames sent, and the last failure to send one.
-    pub fn stats(&self) -> (u64, Option<String>) {
-        let state = self.lock();
-        (state.sent, state.error.clone())
+    /// The last failure to send a frame, cleared by the next frame sent.
+    pub fn error(&self) -> Option<String> {
+        self.lock().error.clone()
     }
 }
 
@@ -191,10 +189,7 @@ fn run(state: &Mutex<State>, stop: &AtomicBool, opened: &mpsc::Sender<Result<(),
                 .try_for_each(|report| frames.send_feature_report(report));
             let mut state = lock();
             match result {
-                Ok(()) => {
-                    state.sent += 1;
-                    state.error = None;
-                }
+                Ok(()) => state.error = None,
                 Err(error) => state.error = Some(error.to_string()),
             }
             last = Instant::now();

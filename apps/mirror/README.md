@@ -108,6 +108,34 @@ and the app warns after a scan when it runs.
   groups the LEDs into fewer segments.
 - The LEDs follow the mirror while it runs. Stopping the mirror, or Exit,
   hands them back to the controller's own effect.
+- **brightness** on a port card, or **brightness, all** in **General**,
+  scales the colors that the mirror sends to the port. The controller takes
+  no brightness command, so the setting applies while the mirror runs.
+
+## Sound reaction
+
+Turn on **Sound reaction** under the screen. A spectrum of the sound that
+Windows plays shows there, and the orange bars are the bands that a hit is
+read from. Beside the spectrum, tick **Reacts** for each light that must
+follow the sound. The other lights keep the mirror's colors as they are.
+
+- When a hit comes, each reacting light goes to its **On bass** level. It
+  then falls back to its **At rest** level over the **Fade** time. The two
+  levels are in percent: 50 and 100 by default.
+- **Adaptive** finds a hit as a jump above the average of the last second or
+  so. It follows each song and the volume. **Sensitivity** sets how small a
+  jump counts. The yellow line shows the level a hit must reach now.
+- **Fixed line** finds a hit as any level above the yellow line. Drag on the
+  spectrum to move it. A bass that stays above the line holds the light at
+  its peak.
+- **Kick (40–100 Hz)** reads the kick drum, with less of the bass line.
+  **All bass (below 150 Hz)** reads every band below 150 Hz.
+- **Fade** from 150 to 300 ms shows each hit. A shorter fade can end before
+  the light shows the hit.
+- A light that reacts shows an orange **SOUND** tag before its name.
+- The levels scale the colors of the mirror, so the lights react while the
+  mirror runs. A Govee light's own brightness still applies under them.
+- The app listens to the default output, and follows it when it changes.
 
 ## Razer headset sound switch
 
@@ -154,7 +182,11 @@ dongle instead. Synapse can stay open.
 | Resolution | Each light | The segment count: as the Govee app shows it, every zone the segment channel renders, or one per LED where the device file measured that. The finest is the default. |
 | Set by hand | Each light | A segment count of your own, up to what the channel renders. |
 | Blend between segments | Each light | The light fades from one segment to the next instead of hard blocks. On a Govee light, the firmware also wraps from the last segment back to the first. On a Razer port, the app computes the fade; with one segment per LED, each LED takes the mean of its color and the colors next to it. |
+| Light addresses | The IP box and **Add** beside **Scan**; the list with **Remove** in **General** of the Govee section | IP addresses that each scan also asks directly. Add a light there when the scan does not find it: some routers drop the multicast scan. The list applies to every profile. |
 | On, Off, color, brightness | Each Govee light, and **General** in the Govee section for every light at once | The general brightness is a percent of each light's own range. |
+| brightness | Each Razer port, and **General** in the Razer section for every port at once | Scales the colors that the mirror sends to the port. |
+| Sound reaction, detection, sensitivity, band, Fade | Under the screen | See [Sound reaction](#sound-reaction). |
+| Reacts, At rest, On bass | Beside the spectrum, per light | Whether the light follows the sound, and its two levels in percent. Off by default. |
 
 While the mirror runs, the power and color buttons are off: a power command
 ends the segment channel on some models. Brightness stays available.

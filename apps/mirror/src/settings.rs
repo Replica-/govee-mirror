@@ -86,6 +86,32 @@ pub struct DeviceSettings {
     pub gradient: bool,
 }
 
+/// What the mirror does to the colors of one light, in percent of full scale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Levels {
+    /// The brightness of a Razer port. A Govee light takes the `brightness`
+    /// command instead.
+    pub brightness: u8,
+    /// Whether the light follows the sound reaction.
+    pub react: bool,
+    /// The level of the sound reaction between two bass hits.
+    pub rest: u8,
+    /// The level of the sound reaction at a bass hit.
+    pub peak: u8,
+}
+
+impl Default for Levels {
+    fn default() -> Self {
+        Self {
+            brightness: 100,
+            react: false,
+            rest: 50,
+            peak: 100,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
@@ -107,6 +133,9 @@ pub struct Settings {
     /// with 0 is not a light. The controller keeps its own counts, set in
     /// Synapse, and these must match them.
     pub razer_leds: [usize; crate::razer::protocol::PORTS],
+    /// Addresses of Govee lights that every scan also asks directly, for a
+    /// network that drops the multicast scan.
+    pub lan_hosts: Vec<std::net::IpAddr>,
     /// Switch the sound output with the Razer headset.
     pub headset: crate::razer::headset::Settings,
     /// How far each color moves from grey, 1 for none. Averaging a patch of
@@ -119,6 +148,11 @@ pub struct Settings {
     /// How many times a second one ring or one wedge of a pattern takes the
     /// place of the next.
     pub animation_speed: f32,
+    /// Per light, by the key of `devices`. A change does not restart the
+    /// mirror: each frame reads them.
+    pub levels: BTreeMap<String, Levels>,
+    /// Raise the lights to their peak level on a bass hit.
+    pub sound: crate::sound::Settings,
 }
 
 impl Default for Settings {
@@ -132,11 +166,14 @@ impl Default for Settings {
             devices: BTreeMap::new(),
             mirror_on_launch: false,
             razer_leds: [0; crate::razer::protocol::PORTS],
+            lan_hosts: Vec::new(),
             headset: crate::razer::headset::Settings::default(),
             saturation: 1.3,
             source: Source::Screen,
             moving: true,
             animation_speed: 0.25,
+            levels: BTreeMap::new(),
+            sound: crate::sound::Settings::default(),
         }
     }
 }
@@ -196,6 +233,26 @@ impl Settings {
         self.assignments
             .iter()
             .flat_map(|(cell, entries)| entries.iter().map(move |a| (*cell, a)))
+    }
+
+    /// The levels of `id`, or the defaults.
+    pub fn levels(&self, id: &str) -> Levels {
+        self.levels.get(id).copied().unwrap_or_default()
+    }
+
+    /// The share of full scale that the mirror gives the colors of light
+    /// `id`, with the sound reaction at `pulse`, from 0 to 1.
+    pub fn scale(&self, id: &str, razer: bool, pulse: f32) -> f32 {
+        let levels = self.levels(id);
+        let mut scale = 1.0;
+        if razer {
+            scale *= f32::from(levels.brightness) / 100.0;
+        }
+        if self.sound.enabled && levels.react {
+            let (rest, peak) = (f32::from(levels.rest), f32::from(levels.peak));
+            scale *= (rest + (peak - rest) * pulse) / 100.0;
+        }
+        scale
     }
 
     /// The saved resolution where the light offers it, else the light's

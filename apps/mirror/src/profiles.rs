@@ -35,6 +35,8 @@ pub struct Library {
     pub mirror_on_launch: bool,
     pub razer_leds: [usize; PORTS],
     #[serde(default)]
+    pub lan_hosts: Vec<std::net::IpAddr>,
+    #[serde(default)]
     pub headset: headset::Settings,
 }
 
@@ -50,6 +52,7 @@ impl Library {
         Self {
             mirror_on_launch: settings.mirror_on_launch,
             razer_leds: settings.razer_leds,
+            lan_hosts: settings.lan_hosts.clone(),
             headset: settings.headset.clone(),
             profiles: vec![Profile {
                 name: "Default".to_owned(),
@@ -117,6 +120,7 @@ impl Library {
         let mut settings = self.profiles[self.active].settings.clone();
         settings.mirror_on_launch = self.mirror_on_launch;
         settings.razer_leds = self.razer_leds;
+        settings.lan_hosts.clone_from(&self.lan_hosts);
         settings.headset = self.headset.clone();
         settings
     }
@@ -126,6 +130,7 @@ impl Library {
     pub fn store(&mut self, settings: &Settings) {
         self.mirror_on_launch = settings.mirror_on_launch;
         self.razer_leds = settings.razer_leds;
+        self.lan_hosts.clone_from(&settings.lan_hosts);
         self.headset = settings.headset.clone();
         self.profiles[self.active].settings = settings.clone();
     }

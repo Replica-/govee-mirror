@@ -5,7 +5,7 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
-## [Unreleased]
+## [0.4.0] — 2026-11-23
 
 ### Added
 
@@ -16,11 +16,29 @@ release that carries `govee-mirror-pc.exe`. The policy is
 - A Windows notification at each headset switch, "Headset on" or "Headset
   off", with the output that now plays. A checkbox in the headset card turns
   it off.
+- A brightness slider on each Razer port, and one for every port in Razer
+  **General**. It scales the colors that the mirror sends.
+- **Sound reaction**, under the screen: a spectrum of the default output,
+  and beside it each light with **Reacts**, **At rest** and **On bass**. A
+  hit raises each reacting light to its **On bass** level, and the light
+  falls back over the **Fade** time. **Adaptive** finds a hit as a jump above
+  the recent average, with a **Sensitivity**; **Fixed line** uses a level
+  dragged on the spectrum. The hit is read from the kick drum (40–100 Hz) or
+  from every band below 150 Hz. A **SOUND** tag on the card marks each light
+  that reacts.
+- **Light addresses**: an IP box and **Add** beside **Scan**, and the list in
+  Govee **General**. Each scan also asks these addresses directly, and every
+  light it already knows, so a network that drops the multicast scan still
+  finds them.
 
 ### Changed
 
 - The window and the tray show the name "Govee Razer Mirror Windows 11 PC".
   The executable stays `govee-mirror-pc.exe`.
+
+### Removed
+
+- The frames-sent count on each light card.
 
 ## [0.3.0] — 2026-11-22
 

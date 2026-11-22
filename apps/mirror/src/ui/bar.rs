@@ -217,7 +217,7 @@ impl App {
 
 /// A slider under a line that holds its name and its value. A range that
 /// spans more than one order of magnitude moves on a log scale.
-fn slider<N: Numeric>(
+pub(super) fn slider<N: Numeric>(
     ui: &mut Ui,
     name: &str,
     value: &mut N,
