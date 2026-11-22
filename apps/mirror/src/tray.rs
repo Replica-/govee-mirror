@@ -69,7 +69,7 @@ pub fn spawn(
     const SIZE: u32 = 32;
     let icon = Icon::from_rgba(pattern::icon(SIZE), SIZE, SIZE).ok()?;
     let tray = TrayIconBuilder::new()
-        .with_tooltip("Govee Mirror PC")
+        .with_tooltip("Govee Razer Mirror Windows 11 PC")
         .with_icon(icon)
         .with_menu(Box::new(menu))
         .with_menu_on_left_click(false)

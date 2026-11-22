@@ -55,7 +55,7 @@ fn main() -> eframe::Result {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_title("Govee Mirror PC")
+            .with_title("Govee Razer Mirror Windows 11 PC")
             .with_inner_size([1320.0, 860.0])
             .with_min_inner_size([900.0, 600.0])
             .with_icon(Arc::new(egui::IconData {
@@ -66,7 +66,7 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native(
-        "Govee Mirror PC",
+        "Govee Razer Mirror Windows 11 PC",
         options,
         Box::new(move |cc| {
             let ctx = cc.egui_ctx.clone();

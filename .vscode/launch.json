@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Govee Mirror PC (debug)",
+      "name": "Govee Razer Mirror Windows 11 PC (debug)",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/apps/mirror/target/debug/govee-mirror-pc.exe",
@@ -11,7 +11,7 @@
       "console": "integratedTerminal"
     },
     {
-      "name": "Govee Mirror PC (release)",
+      "name": "Govee Razer Mirror Windows 11 PC (release)",
       "type": "cppvsdbg",
       "request": "launch",
       "program": "${workspaceFolder}/apps/mirror/target/release/govee-mirror-pc.exe",

@@ -1,4 +1,4 @@
-# govee-mirror-pc
+# Govee Razer Mirror Windows 11 PC
 
 A replacement for DreamView on Windows. I got sick of the Govee app, so this
 mirrors the screen onto Govee lights straight over your own network: no
@@ -81,7 +81,7 @@ list mirrors as one color.
 
 ## Built on Govee Toolkit
 
-govee-mirror-pc is a fork of
+Govee Razer Mirror Windows 11 PC is a fork of
 [Govee Toolkit](https://github.com/damient/govee-toolkit). The toolkit
 implements the protocol, and the app calls it directly. What follows is the
 toolkit's own description.

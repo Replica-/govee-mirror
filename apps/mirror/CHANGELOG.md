@@ -5,6 +5,13 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+## [Unreleased]
+
+### Changed
+
+- The window and the tray show the name "Govee Razer Mirror Windows 11 PC".
+  The executable stays `govee-mirror-pc.exe`.
+
 ## [0.3.0] — 2026-11-22
 
 ### Added

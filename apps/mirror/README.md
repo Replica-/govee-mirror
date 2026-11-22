@@ -1,4 +1,4 @@
-# govee-mirror-pc
+# Govee Razer Mirror Windows 11 PC
 
 A replacement for DreamView on Windows, written because I got sick of the
 Govee app. It mirrors the screen onto Govee lights over `lan`: a grid of
@@ -35,8 +35,8 @@ cd apps/mirror
 cargo run --release
 ```
 
-The executable is `target/release/govee-mirror-pc.exe`. In VS Code, the "Govee
-Mirror PC" configurations in `.vscode/launch.json` build and start the app.
+The executable is `target/release/govee-mirror-pc.exe`. In VS Code, the "Govee Razer Mirror Windows 11 PC" configurations in
+`.vscode/launch.json` build and start the app.
 
 ## Use
 
