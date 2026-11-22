@@ -9,6 +9,11 @@ releases apart and keeps
 
 ### Added
 
+- A `lan` scan also sends its request to the address of each known device,
+  and to each address of the new `lan.hosts` key (`lan::Options::hosts`). A
+  network that drops the multicast request still finds those devices.
+- **Breaking:** `lan::Options` carries `hosts`. A struct literal takes
+  `..Options::default()`.
 - `DeviceHandle::status()` waits for `Measurements::status_settle_ms` after a
   command from the same process, so it reports the new state.
 - `Measurements::status_settle()` gives that time for one mode.

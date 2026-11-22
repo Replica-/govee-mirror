@@ -98,6 +98,7 @@ impl Transport {
             status_timeout: options.status_timeout,
             verify_interval: options.verify_interval,
             devices: Devices::new(),
+            hosts: options.hosts,
             cache: Mutex::new(options.cache),
             events,
             replies,

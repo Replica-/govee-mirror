@@ -1,5 +1,6 @@
 //! How the `lan` transport is configured.
 
+use std::net::IpAddr;
 use std::time::Duration;
 
 use crate::lan::cache::Cache;
@@ -28,6 +29,10 @@ pub struct Options {
     pub verify_interval: Option<Duration>,
     /// Drop a cached device that has not answered a scan for this long.
     pub forget_after: Duration,
+    /// Addresses that every scan also asks directly. A network can drop the
+    /// multicast request, and a device answers the same request at its own
+    /// address.
+    pub hosts: Vec<IpAddr>,
 }
 
 impl Default for Options {
@@ -44,6 +49,7 @@ impl Default for Options {
             status_timeout: Duration::from_millis(500),
             verify_interval: Some(Duration::from_secs(1)),
             forget_after: Duration::from_secs(7 * 24 * 3600),
+            hosts: Vec::new(),
         }
     }
 }

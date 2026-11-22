@@ -5,6 +5,7 @@
 //! sits behind the `lan` feature.
 
 use std::fmt;
+use std::net::IpAddr;
 use std::path::PathBuf;
 
 use serde::de::{self, Visitor};
@@ -46,6 +47,9 @@ pub struct LanConfig {
     pub cooldown_seconds: u64,
     /// How long a mode that is down waits.
     pub down_cooldown_seconds: u64,
+    /// Addresses that every scan also asks directly, for a network that drops
+    /// the multicast request. Every scan also asks each known device.
+    pub hosts: Vec<IpAddr>,
 }
 
 impl Default for LanConfig {
@@ -64,6 +68,7 @@ impl Default for LanConfig {
             recover_after: breaker.recover_after,
             cooldown_seconds: breaker.cooldown.as_secs(),
             down_cooldown_seconds: breaker.down_cooldown.as_secs(),
+            hosts: Vec::new(),
         }
     }
 }
@@ -107,6 +112,7 @@ impl LanConfig {
             forget_after: std::time::Duration::from_secs(
                 self.forget_after_days.saturating_mul(86_400),
             ),
+            hosts: self.hosts.clone(),
             ..crate::lan::Options::default()
         })
     }

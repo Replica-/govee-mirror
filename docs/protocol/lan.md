@@ -131,6 +131,9 @@ the device as unreachable.
   send.
 - Do not re-run a multicast scan before each command: scan at startup plus a
   periodic background refresh, with a persistent on-disk cache.
+- A network can drop the multicast request. A device also answers the `scan`
+  request sent to its own address on port `4001`, so send it there too for
+  each known address.
 - Fire-and-verify: send without waiting for an ACK, verify state asynchronously.
 
 Measuring a device's headroom: see [2.7](#27-throughput).

@@ -36,6 +36,9 @@ impl Shared {
 
     /// Send one `scan` request and read the replies until `window` runs out.
     ///
+    /// The request goes to the scan target, and to each address of
+    /// [`Shared::unicast_targets`]: a network can drop the multicast one.
+    ///
     /// `until` names the device that ends the wait. Every reply is recorded
     /// whether or not it is that one, because it arrived.
     async fn collect_replies(
@@ -47,6 +50,12 @@ impl Shared {
         self.socket
             .send_to(&scan_request(), self.endpoints.scan_target)
             .await?;
+        for target in self.unicast_targets() {
+            // One address that cannot be reached does not fail the scan.
+            if let Err(e) = self.socket.send_to(&scan_request(), target).await {
+                tracing::debug!(%target, error = %e, "the unicast scan request was not sent");
+            }
+        }
 
         let deadline = tokio::time::Instant::now() + window;
         let mut found: std::collections::BTreeMap<DeviceId, DiscoveredDevice> =
@@ -71,6 +80,22 @@ impl Shared {
             self.persist_cache();
         }
         Ok(found.into_values().collect())
+    }
+
+    /// The configured hosts and the address of every tracked device, on the
+    /// scan port, without the scan target and without repeats.
+    fn unicast_targets(&self) -> Vec<SocketAddr> {
+        let port = self.endpoints.scan_target.port();
+        let mut ips: Vec<IpAddr> = self.hosts.clone();
+        if let Ok(devices) = self.devices.lock() {
+            ips.extend(devices.values().map(|tracked| tracked.ip));
+        }
+        ips.sort_unstable();
+        ips.dedup();
+        ips.into_iter()
+            .map(|ip| SocketAddr::new(ip, port))
+            .filter(|target| *target != self.endpoints.scan_target)
+            .collect()
     }
 
     /// Write the cache out without blocking the runtime.

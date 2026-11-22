@@ -78,6 +78,8 @@ pub(super) struct Shared {
     pub(super) status_timeout: Duration,
     pub(super) verify_interval: Option<Duration>,
     pub(super) devices: Devices<Tracked>,
+    /// Addresses that every scan also asks directly.
+    pub(super) hosts: Vec<IpAddr>,
     pub(super) cache: Mutex<Cache>,
     pub(super) events: broadcast::Sender<Event>,
     pub(super) replies: broadcast::Sender<DiscoveredDevice>,
