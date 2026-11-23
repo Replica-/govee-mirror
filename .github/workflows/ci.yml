@@ -72,9 +72,11 @@ jobs:
       matrix:
         # The `lan` transport is UDP multicast on socket2 with one reused
         # socket, and SO_REUSEADDR, interface selection and loopback of one's
-        # own datagrams differ on each of the three. The in-process simulator
-        # makes that testable without hardware, so it is tested.
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # own datagrams differ on each platform. The in-process simulator
+        # makes that testable without hardware, so it is tested. Windows 11 is
+        # the one platform tested on hardware. Linux stays for the
+        # platform-independent checks below. macOS is not tested.
+        os: [ubuntu-latest, windows-latest]
     defaults:
       run:
         working-directory: packages/rust
@@ -99,7 +101,7 @@ jobs:
         with:
           workspaces: packages/rust
       # fmt, clippy and doc are platform-independent — running them once on
-      # Linux costs a third of running them three times.
+      # Linux costs half of running them on each platform.
       # rustfmt.toml uses nightly-only options (import grouping, comment
       # wrapping). RUSTUP_TOOLCHAIN overrides rust-toolchain.toml for this step
       # only.

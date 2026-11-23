@@ -394,11 +394,12 @@ every Python source in the repository, `tools/` and `site/tools/` included;
 The MSRV in `packages/rust/Cargo.toml` is checked on every push. Raise it in the
 same commit as the feature that needs it, never after the fact.
 
-CI runs the test suite on **Linux, macOS and Windows**. This is not
+CI runs the test suite on **Linux and Windows**. Windows 11 is the one
+platform tested on hardware, and macOS is not tested. This is not
 box-ticking: multicast socket behavior differs on each — interface selection,
 loopback of one's own datagrams, what binding to the wildcard address actually
 joins — and discovery is the part that breaks. A change to the socket setup is
-not done until the three of them are green.
+not done until both of them are green.
 
 `cargo test` also validates every `devices/*.yaml` and replays the conformance
 vectors in `tests/fixtures/golden/`. Both directions fail the suite: a vector

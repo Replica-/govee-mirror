@@ -298,7 +298,8 @@ tables, the other packages and the capture check, which read the whole
 repository. A bare name is a substring filter on the check names, so
 `tools/qa.sh clippy` runs that check alone. `ci.yml` runs on push to `main`
 and on pull request, skipping every job while the pull request is a draft, and
-tests on Linux, macOS and Windows because the multicast socket differs on each.
+tests on Linux and Windows because the multicast socket differs on each. macOS
+is not tested.
 On a pull request, a job runs only when a changed file is in its zone.
 `tools/ci-changes.sh` maps a path to its zones; give a new directory a rule
 there. A path with no rule runs every job.
