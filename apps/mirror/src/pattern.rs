@@ -111,7 +111,7 @@ fn wedge(turn: f32) -> [u8; 3] {
 }
 
 /// A fully saturated color at `hue`, from 0 to 1.
-fn hue(hue: f32) -> [u8; 3] {
+pub fn hue(hue: f32) -> [u8; 3] {
     let channel = |offset: f32| {
         let k = (hue * 6.0 + offset).rem_euclid(6.0);
         let value = 1.0 - (k.min(4.0 - k).clamp(0.0, 1.0));

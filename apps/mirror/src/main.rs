@@ -88,7 +88,7 @@ fn main() -> eframe::Result {
             let switched = Arc::new(AtomicU64::new(0));
             let send = engine.remote();
             let to_capture = Arc::clone(&requests);
-            watcher::spawn(
+            let switcher = watcher::Switcher::new(
                 Arc::clone(&library),
                 move |settings: Settings| {
                     *to_capture.lock().unwrap_or_else(PoisonError::into_inner) = Request {
@@ -100,7 +100,8 @@ fn main() -> eframe::Result {
                 Arc::clone(&switched),
                 cc.egui_ctx.clone(),
             );
-            let profiles = ui::Profiles::new(library, switched);
+            watcher::spawn(switcher.clone());
+            let profiles = ui::Profiles::new(library, switched, switcher);
             Ok(Box::new(ui::App::new(
                 runtime, engine, capture, requests, settings, shell, profiles,
             )))

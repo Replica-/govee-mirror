@@ -24,7 +24,7 @@ const FRAME_LEN: usize = 320;
 const TRANSACTION: u8 = 0x1F;
 
 /// A control report, with the report id 0 that the HID call takes first.
-fn control(class: u8, id: u8, args: &[u8]) -> Vec<u8> {
+pub(super) fn control(class: u8, id: u8, args: &[u8]) -> Vec<u8> {
     let mut r = vec![0u8; 1 + CONTROL_LEN];
     let body = &mut r[1..];
     body[1] = TRANSACTION;

@@ -175,7 +175,8 @@ impl App {
         out
     }
 
-    /// The profile row above the grid. Answers whether the settings changed.
+    /// The profile row under the top bar. Answers whether the settings
+    /// changed.
     pub(super) fn profile(&mut self, ui: &mut Ui) -> bool {
         let mut changed = false;
         group(ui, "Profile", |ui| {

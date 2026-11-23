@@ -9,8 +9,8 @@ use std::{fs, io};
 
 use serde::{Deserialize, Serialize};
 
-use crate::razer::headset;
 use crate::razer::protocol::PORTS;
+use crate::razer::{chroma, headset};
 use crate::settings::Settings;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -40,6 +40,15 @@ pub struct Library {
     pub lights: std::collections::BTreeMap<String, crate::settings::Light>,
     #[serde(default)]
     pub headset: headset::Settings,
+    #[serde(default)]
+    pub macro_keys: Vec<Option<String>>,
+    /// Read from an earlier file, where every profile shared the effects of
+    /// the Razer keyboard and mousepad. [`Library::parse`] gives them to each
+    /// profile.
+    #[serde(default, skip_serializing)]
+    keyboard: Option<chroma::Settings>,
+    #[serde(default, skip_serializing)]
+    mousepad: Option<chroma::Settings>,
 }
 
 impl Default for Library {
@@ -57,6 +66,9 @@ impl Library {
             lan_hosts: settings.lan_hosts.clone(),
             lights: settings.lights.clone(),
             headset: settings.headset.clone(),
+            macro_keys: settings.macro_keys.clone(),
+            keyboard: None,
+            mousepad: None,
             profiles: vec![Profile {
                 name: "Default".to_owned(),
                 process: None,
@@ -101,6 +113,16 @@ impl Library {
         if library.profiles.is_empty() {
             library = Self::default();
         }
+        for profile in &mut library.profiles {
+            if let Some(keyboard) = &library.keyboard {
+                profile.settings.keyboard.clone_from(keyboard);
+            }
+            if let Some(mousepad) = &library.mousepad {
+                profile.settings.mousepad.clone_from(mousepad);
+            }
+        }
+        library.keyboard = None;
+        library.mousepad = None;
         let last = library.profiles.len() - 1;
         library.active = library.active.min(last);
         library.chosen = library.chosen.min(last);
@@ -126,6 +148,7 @@ impl Library {
         settings.lan_hosts.clone_from(&self.lan_hosts);
         settings.lights.clone_from(&self.lights);
         settings.headset = self.headset.clone();
+        settings.macro_keys.clone_from(&self.macro_keys);
         settings
     }
 
@@ -137,6 +160,7 @@ impl Library {
         self.lan_hosts.clone_from(&settings.lan_hosts);
         self.lights.clone_from(&settings.lights);
         self.headset = settings.headset.clone();
+        self.macro_keys.clone_from(&settings.macro_keys);
         self.profiles[self.active].settings = settings.clone();
     }
 
@@ -170,6 +194,24 @@ mod tests {
             process: process.map(str::to_owned),
             settings: Settings::default(),
         }
+    }
+
+    #[test]
+    fn shared_razer_effects_of_an_earlier_file_go_to_every_profile() {
+        let text = r#"{
+            "profiles": [
+                {"name": "A", "settings": {}},
+                {"name": "B", "settings": {}}
+            ],
+            "active": 0, "chosen": 0, "mirror_on_launch": false,
+            "razer_leds": [0, 0, 0, 0, 0, 0],
+            "keyboard": {"enabled": true, "brightness": 30}
+        }"#;
+        let library = Library::parse(text).unwrap_or_default();
+        assert!(library.profiles.iter().all(|p| p.settings.keyboard.enabled));
+        assert_eq!(library.profiles[1].settings.keyboard.brightness, 30);
+        let saved = serde_json::to_value(&library).unwrap_or_default();
+        assert!(saved.get("keyboard").is_none());
     }
 
     #[test]

@@ -87,11 +87,13 @@ each light that paints it, so the other lights in the box keep theirs.
 ## Profiles
 
 A profile holds a whole setup: the screen, the grid, the cells, each light's
-resolution and blend, the source, and the saturation, smoothing and rate.
-The Razer port counts, the headset switch and **Mirror on launch** are
+resolution and blend, the source, the saturation, smoothing and rate, and
+the key and LED effects of the Razer keyboard and mousepad. The Razer port
+counts, the headset switch, the macro keys and **Mirror on launch** are
 shared by every profile.
 
-Above the grid, pick a profile, or press **New** for a copy of this one. A profile can name a program, such as `game.exe`: while it runs,
+In the row under the top bar, pick a profile, or press **New** for a copy of
+this one. A profile can name a program, such as `game.exe`: while it runs,
 the app switches to that profile, and it switches back to the one you picked
 when the program ends. The process list is read every 5 seconds, and only
 while a profile names a program.
@@ -166,6 +168,44 @@ dongle instead. Synapse can stay open.
   output still plays. An output that you picked by hand meanwhile stays.
 - The switch sets the default output for every role: playback and
   communications.
+
+## Razer key and LED effects
+
+The Huntsman V2 keyboard (full size, ANSI) and the Strider Chroma mousepad
+each have a card of their own in the **Razer** section. They do not mirror
+the screen: the app draws an effect on each group of keys or LEDs. The
+mousepad has 19 LEDs up its left edge.
+
+- Unfold the card, and pick what the lights show: **Own effect** (the effect
+  that the device keeps in its memory), **App effects**, or **Off** (every key
+  or LED dark). Then press **Edit effects…**.
+- **Add group**, then click or drag over the drawing to put keys or LEDs in
+  the picked group. The right button takes them out. Each one is in one group
+  at a time.
+- Each group has an effect: **Static**, **Breathing**, **Spectrum**, **Wave**
+  or **Starlight**, with a color and a speed where the effect takes one.
+- On the mousepad, **Wave** runs up the strip.
+- **Brightness** scales every key or LED. Those in no group are dark.
+
+The drawing shows the colors that the device shows. The app sends a frame only
+when a color changes, so static groups cost nothing while they hold. When you
+turn the option off or exit the app, the device gets back the effect that it
+keeps in its own memory. Both devices were tested with Synapse closed.
+
+The effects belong to the profile in use, so two profiles can light the
+devices in two ways.
+
+### Macro keys
+
+The three macro keys of the Huntsman V2 send nothing to Windows on their own.
+In the keyboard card, give a key a profile: a press switches to that profile,
+as a pick in the profile row does. For example, one key picks a profile with
+the effects, and another picks a copy of it with the keyboard and mousepad
+**Off**.
+
+While a key has a profile, the app holds the keyboard in driver mode, which
+makes the macro keys report to it. The other keys, the Fn keys and the dial
+work as before. When the app exits, the keyboard goes back to normal mode.
 
 ## Settings
 

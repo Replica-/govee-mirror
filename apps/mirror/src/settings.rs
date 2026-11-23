@@ -150,6 +150,13 @@ pub struct Settings {
     pub lights: BTreeMap<String, Light>,
     /// Switch the sound output with the Razer headset.
     pub headset: crate::razer::headset::Settings,
+    /// The profile that each macro key of the Razer keyboard switches to,
+    /// left key first. `None` leaves the key unused.
+    pub macro_keys: Vec<Option<String>>,
+    /// The effects on the keys of the Razer keyboard.
+    pub keyboard: crate::razer::chroma::Settings,
+    /// The effects on the LEDs of the Razer mousepad.
+    pub mousepad: crate::razer::chroma::Settings,
     /// How far each color moves from grey, 1 for none. Averaging a patch of
     /// screen pulls colors toward grey, and this pushes them back.
     pub saturation: f32,
@@ -181,6 +188,9 @@ impl Default for Settings {
             lan_hosts: Vec::new(),
             lights: BTreeMap::new(),
             headset: crate::razer::headset::Settings::default(),
+            macro_keys: Vec::new(),
+            keyboard: crate::razer::chroma::Settings::default(),
+            mousepad: crate::razer::chroma::Settings::default(),
             saturation: 1.3,
             source: Source::Screen,
             moving: true,

@@ -7,6 +7,7 @@
 //! shares that one controller between every port that the mirror or a
 //! highlight drives.
 
+pub mod chroma;
 pub mod headset;
 pub mod protocol;
 

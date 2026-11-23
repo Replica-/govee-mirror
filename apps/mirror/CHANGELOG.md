@@ -5,6 +5,26 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+## [Unreleased]
+
+### Added
+
+- **Key and LED effects** for the Razer Huntsman V2 keyboard and the Razer
+  Strider Chroma mousepad, each in a card of its own in the Razer section.
+  Put keys or LEDs in groups on a drawing of the device, and give each group
+  Static, Breathing, Spectrum, Wave or Starlight, with a color and a speed.
+  Those in no group are dark. Each profile holds its own effects.
+- **Off** for the keyboard and the mousepad: every key or LED dark. With
+  **Own effect** or when the app exits, the device gets back the effect that
+  it keeps in its own memory.
+- **Macro keys**: each of the three macro keys of the Huntsman V2 can switch
+  to a profile. The app holds the keyboard in driver mode while a key has a
+  profile, and hands it back when it exits.
+
+### Changed
+
+- The profile row moves from above the grid to under the top bar.
+
 ## [0.5.0] — 2026-11-23
 
 ### Added

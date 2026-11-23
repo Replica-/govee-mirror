@@ -9,6 +9,7 @@ use eframe::egui::{self, RichText, Ui};
 use crate::process;
 use crate::profiles::{Library, Profile};
 use crate::settings::Settings;
+use crate::watcher::Switcher;
 
 /// What the person did. The caller applies a switch: it reloads its settings
 /// from the library and hands them on.
@@ -24,6 +25,8 @@ pub enum Action {
 /// watcher's switches that the window has seen.
 pub struct Profiles {
     pub library: Arc<Mutex<Library>>,
+    /// What a switch from another thread goes through.
+    pub switcher: Switcher,
     switched: Arc<AtomicU64>,
     seen: u64,
     /// The profile the window's settings belong to. The watcher can switch
@@ -34,13 +37,14 @@ pub struct Profiles {
 }
 
 impl Profiles {
-    pub fn new(library: Arc<Mutex<Library>>, switched: Arc<AtomicU64>) -> Self {
+    pub fn new(library: Arc<Mutex<Library>>, switched: Arc<AtomicU64>, switcher: Switcher) -> Self {
         let active = library
             .lock()
             .unwrap_or_else(PoisonError::into_inner)
             .active;
         Self {
             library,
+            switcher,
             active,
             switched,
             seen: 0,

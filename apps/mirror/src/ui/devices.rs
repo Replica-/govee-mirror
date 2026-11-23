@@ -6,6 +6,7 @@ use std::collections::HashMap;
 use eframe::egui::{self, Color32, RichText, Sense, Ui, UiBuilder};
 
 use super::brands::{self, Brand};
+use super::chroma;
 use super::headset::Panel;
 use super::hosts;
 use super::levels;
@@ -38,6 +39,14 @@ impl Default for Controls {
     }
 }
 
+/// The Razer cards that are not lights, and the profile names their
+/// settings name.
+pub struct Razer<'a> {
+    pub headset: &'a mut Panel,
+    pub chroma: &'a mut [chroma::Panel],
+    pub profiles: &'a [String],
+}
+
 /// Answers the commands to send, and whether the settings changed.
 pub fn show(
     ui: &mut Ui,
@@ -45,8 +54,13 @@ pub fn show(
     settings: &mut Settings,
     brush: &mut Brush,
     controls: &mut Controls,
-    headset: &mut Panel,
+    razer: Razer<'_>,
 ) -> (Vec<Command>, bool) {
+    let Razer {
+        headset,
+        chroma,
+        profiles,
+    } = razer;
     let mut commands = Vec::new();
     let mut changed = false;
     if brush.target.is_none() {
@@ -59,7 +73,13 @@ pub fn show(
             .filter(|t| Brand::of(t) == brand)
             .collect();
         let headset_shown = headset.present() || settings.headset.enabled;
-        if brand == Brand::Razer && lights.is_empty() && !status.razer && !headset_shown {
+        let chroma_shown: Vec<bool> = chroma.iter().map(|p| p.shown(settings)).collect();
+        if brand == Brand::Razer
+            && lights.is_empty()
+            && !status.razer
+            && !headset_shown
+            && !chroma_shown.contains(&true)
+        {
             continue;
         }
         brands::section(ui, brand, lights.len(), |ui| {
@@ -79,6 +99,12 @@ pub fn show(
             for target in lights {
                 changed |= card(ui, status, settings, brush, controls, target, &mut commands);
                 ui.add_space(4.0);
+            }
+            for (panel, shown) in chroma.iter_mut().zip(&chroma_shown) {
+                if brand == Brand::Razer && *shown {
+                    changed |= panel.card(ui, settings, profiles);
+                    ui.add_space(4.0);
+                }
             }
             if brand == Brand::Razer && headset_shown {
                 changed |= headset.show(ui, settings);

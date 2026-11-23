@@ -3,6 +3,7 @@
 mod bar;
 mod brands;
 mod brush;
+mod chroma;
 mod devices;
 mod grid;
 mod headset;
@@ -47,6 +48,8 @@ pub struct App {
     brush: Brush,
     controls: devices::Controls,
     headset: headset::Panel,
+    /// One panel per device of `razer::chroma::devices::ALL`.
+    chroma: Vec<chroma::Panel>,
     shell: Shell,
     profiles: Profiles,
     usage: usage::Shared,
@@ -68,6 +71,14 @@ impl App {
         let headset = headset::Panel::new(razer::headset::spawn(std::sync::Arc::clone(
             &profiles.library,
         )));
+        let chroma = razer::chroma::devices::ALL
+            .into_iter()
+            .map(|spec| {
+                let library = std::sync::Arc::clone(&profiles.library);
+                let handle = razer::chroma::spawn(spec, library, profiles.switcher.clone());
+                chroma::Panel::new(spec, handle)
+            })
+            .collect();
         Self {
             runtime,
             engine,
@@ -80,6 +91,7 @@ impl App {
             brush: Brush::default(),
             controls: devices::Controls::default(),
             headset,
+            chroma,
             shell,
             profiles,
             usage,
@@ -179,7 +191,16 @@ impl eframe::App for App {
             commands.extend(out.commands);
             changed |= out.changed;
             problem = out.problem;
+            ui.horizontal(|ui| changed |= self.profile(ui));
+            ui.add_space(4.0);
         });
+        let names: Vec<String> = self
+            .profiles
+            .lock()
+            .profiles
+            .iter()
+            .map(|p| p.name.clone())
+            .collect();
 
         egui::Panel::left("devices")
             .default_size(320.0)
@@ -208,7 +229,11 @@ impl eframe::App for App {
                         &mut self.settings,
                         &mut self.brush,
                         &mut self.controls,
-                        &mut self.headset,
+                        devices::Razer {
+                            headset: &mut self.headset,
+                            chroma: &mut self.chroma,
+                            profiles: &names,
+                        },
                     );
                     commands.extend(sent);
                     changed |= edited;
@@ -251,8 +276,6 @@ impl eframe::App for App {
         );
         let moving = animation.is_some() && self.settings.moving;
         egui::CentralPanel::default().show(ui, |ui| {
-            changed |= self.profile(ui);
-            ui.add_space(6.0);
             changed |= grid::show(
                 ui,
                 &mut self.settings,
@@ -262,6 +285,10 @@ impl eframe::App for App {
                 &mut self.brush,
             );
         });
+
+        for panel in &mut self.chroma {
+            changed |= panel.window(&ctx, &mut self.settings);
+        }
 
         drop(status);
         if let Some(problem) = problem {
@@ -278,7 +305,10 @@ impl eframe::App for App {
         }
         // A moving pattern and the spectrum change on every frame; the screen
         // preview needs fewer.
-        let animated = moving || self.settings.sound.enabled;
+        let settings = &mut self.settings;
+        let animated = moving
+            || settings.sound.enabled
+            || self.chroma.iter().any(|panel| panel.animated(settings));
         ctx.request_repaint_after(if animated { ANIMATION } else { PREVIEW });
     }
 
@@ -289,6 +319,9 @@ impl eframe::App for App {
         // The streams disarm before the process ends, so each light goes back
         // to the color it held.
         let done = self.engine.quit();
+        for panel in &mut self.chroma {
+            panel.stop();
+        }
         let _ = self
             .runtime
             .block_on(async { tokio::time::timeout(Duration::from_secs(3), done).await });
