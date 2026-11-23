@@ -12,3 +12,7 @@ extend-exclude = [
 # `PNGs` reads as "PN", and typos asks for "ON".
 # `sACN` reads as "ACN", and typos asks for "CAN".
 extend-ignore-re = ["\\bH[0-9A-Z]{4}\\b", "\\bPNGs\\b", "\\bsACN\\b"]
+
+[default.extend-words]
+# `MaxLOD` is a field of the D3D11 sampler descriptor: LOD is "level of detail".
+lod = "lod"
