@@ -167,6 +167,24 @@ dongle instead. Synapse can stay open.
 - The switch sets the default output for every role: playback and
   communications.
 
+## MSI monitor input
+
+An MSI monitor that answers DDC/CI gets a card in the **MSI** section. The
+card shows the monitor's input and has a button for each known input:
+**This PC** and **USB-C**. Two hotkeys do the same from any program:
+
+| Hotkey | Input |
+| ------ | ----- |
+| Ctrl+Alt+F12 | This PC |
+| Ctrl+Alt+F11 | USB-C |
+
+- DDC/CI goes over the video cable, so it reaches the monitor while it
+  shows the other input. The PC switches away and back on its own.
+- The monitor's KVM moves its USB ports with the input. Keep the keyboard
+  on the PC, not on the monitor's ports, so that the hotkey still reaches
+  the PC after a switch.
+- Turn on **DDC/CI** in the monitor's menu if the section does not show.
+
 ## Settings
 
 | Setting | Where | What it does |

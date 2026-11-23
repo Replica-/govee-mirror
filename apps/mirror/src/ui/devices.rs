@@ -46,6 +46,7 @@ pub fn show(
     brush: &mut Brush,
     controls: &mut Controls,
     headset: &mut Panel,
+    monitor: &mut super::monitor::Panel,
 ) -> (Vec<Command>, bool) {
     let mut commands = Vec::new();
     let mut changed = false;
@@ -62,7 +63,8 @@ pub fn show(
         if brand == Brand::Razer && lights.is_empty() && !status.razer && !headset_shown {
             continue;
         }
-        brands::section(ui, brand, lights.len(), |ui| {
+        let noun = if lights.len() == 1 { "light" } else { "lights" };
+        brands::section(ui, brand, &format!("{} {noun}", lights.len()), |ui| {
             brands::general(ui, brand, |ui| match brand {
                 Brand::Govee => {
                     commands.extend(brands::govee(ui, status, controls));
@@ -72,6 +74,7 @@ pub fn show(
                     changed |= brands::razer(ui, status, settings);
                     changed |= levels::razer_all(ui, status, settings, controls);
                 }
+                Brand::Msi => {}
             });
             if lights.is_empty() && status.busy.is_none() {
                 ui.label(RichText::new("No light yet. Press Scan.").weak());
@@ -85,6 +88,9 @@ pub fn show(
             }
         });
         ui.add_space(8.0);
+    }
+    if monitor.present() {
+        brands::section(ui, Brand::Msi, "1 monitor", |ui| monitor.show(ui));
     }
     (commands, changed)
 }

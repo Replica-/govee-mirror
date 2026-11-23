@@ -5,6 +5,16 @@ apart from `govee-toolkit` and releases under `mirror-vX.Y.Z`, as a GitHub
 release that carries `govee-mirror-pc.exe`. The policy is
 [`../../docs/versioning.md`](../../docs/versioning.md).
 
+## [Unreleased]
+
+### Added
+
+- An **MSI** section with a card for the monitor. It reads the monitor's
+  input over DDC/CI and switches it to **This PC** or **USB-C**, also while
+  the monitor shows the other input.
+- Hotkeys for the monitor's input: Ctrl+Alt+F12 for **This PC**,
+  Ctrl+Alt+F11 for **USB-C**.
+
 ## [0.5.0] — 2026-11-23
 
 ### Added
