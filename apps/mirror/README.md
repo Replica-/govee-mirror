@@ -1,17 +1,50 @@
 # Govee Razer Mirror Windows 11 PC
 
-A replacement for DreamView on Windows, written because I got sick of the
-Govee app. It mirrors the screen onto Govee lights over `lan`: a grid of
-square cells covers the screen, and each cell feeds one segment of one light.
-The features are listed at the top of the
-[repository README](../../README.md#features).
+One Windows app for the Govee lights and the Razer devices on a desk. It
+mirrors the screen onto the lights, draws effects on the keyboard and the
+mousepad, reacts to the sound, and switches the sound output with the
+headset. Every device is set up in one window, and one profile holds the
+whole setup.
 
 ![The lights and their segments](docs/lights.png)
 
+## One app, nothing else to run
+
+- **One executable** of about 11 MB. There is no installer, no service, no
+  updater and no other process.
+- **No account and no cloud.** The app talks to the Govee lights over the
+  local network and to the Razer devices over USB. Synapse and Govee Desktop
+  do not need to run. The Govee Home app is needed once per light, to turn on
+  LAN Control.
+- **Light on the PC.** With the window in the tray and the mirror at 30 fps,
+  the app used about 0.4% of all CPU cores and well under 1% of the GPU,
+  measured on one Windows 11 PC. The screen is shrunk on the GPU in one
+  shader pass, and only a small image comes back to the CPU.
+- **Each function is one control.** A device card holds what that device
+  does. The settings save on each change.
+
+## What it does
+
+| Device | What the app does |
+| ------ | ----------------- |
+| Govee lights over the LAN | Mirror the screen, segment by segment: each cell of a grid over the screen feeds one segment. Power, color and brightness per light, or for all at once. |
+| Razer Chroma Addressable RGB Controller | Each port is a light that mirrors the screen, one segment per LED or fewer. |
+| Razer Huntsman V2 keyboard | Effects per group of keys: Static, Breathing, Spectrum, Wave, Starlight. Its three macro keys switch profiles. |
+| Razer Strider Chroma mousepad | The same effects on its 19 edge LEDs. |
+| Razer BlackShark V3 Pro headset | Windows plays on the headset while it is on, and on another output while it is off. |
+| Every light | Sound reaction: a bass hit raises the light to its peak level, then it fades back. |
+| The whole setup | Profiles, picked by hand, by a macro key, or by the program that runs. |
+
+The devices that this app was tested on: Govee H61F2 and H6056, and the four
+Razer devices above. Another Govee light that answers the LAN scan mirrors as
+one color, or segment by segment where the device catalog describes its
+segments. Another Razer device is not supported yet.
+
 ![Two light bars, one on each edge of the screen](docs/segments.png)
 
-The app calls the `govee-toolkit` crate directly. It is one executable, and it
-carries the device catalog.
+The app calls the `govee-toolkit` crate directly, and carries the device
+catalog. The features of the toolkit are listed at the top of the
+[repository README](../../README.md#features).
 
 ## Requirements
 
@@ -20,6 +53,9 @@ carries the device catalog.
   the same network as the computer.
 - Govee Desktop closed. It holds port 4002, which the lights answer on, and
   only one program can hold it.
+- Razer Synapse closed for the ARGB controller: it sends frames of its own.
+  The keyboard and the mousepad were tested with Synapse closed. The headset
+  switch works with Synapse open.
 - To build: the Rust toolchain for `x86_64-pc-windows-msvc`, with the Visual
   Studio C++ build tools.
 
@@ -39,6 +75,11 @@ The executable is `target/release/govee-mirror-pc.exe`. In VS Code, the "Govee R
 `.vscode/launch.json` build and start the app.
 
 ## Use
+
+The top bar holds **Start mirror**, the screen and the output settings. The
+profile row is under it. The lights are on the left, in a section per brand.
+The segments of the chosen light are on the right, and the screen grid is in
+the middle.
 
 1. Choose the screen and the number of columns in the top bar. The rows
    follow from the shape of the screen, so that every cell is square.
