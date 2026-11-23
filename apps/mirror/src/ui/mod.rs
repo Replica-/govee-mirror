@@ -33,6 +33,9 @@ pub use self::shell::Shell;
 const PREVIEW: Duration = Duration::from_millis(100);
 /// How often the window redraws while the animation runs.
 const ANIMATION: Duration = Duration::from_millis(33);
+/// How often the window runs a frame while it is out of sight: it still
+/// saves the settings and takes the lights that a scan found.
+const HIDDEN: Duration = Duration::from_millis(500);
 /// How long the settings wait after a change before they go to disk.
 const SAVE_DELAY: Duration = Duration::from_millis(500);
 
@@ -154,16 +157,32 @@ impl App {
 impl eframe::App for App {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        // eframe runs no frame for a hidden or minimized window, so the last
-        // frame before it hides sets this to false.
         let shown = self.shell.frame(&ctx, &mut self.with_windows);
         capture::lock(&self.capture).demand.window = shown;
+        crate::sound::lock(&self.engine.sound).demand.window = shown;
         if let Some(settings) = self.profiles.switched() {
             // The watcher has handed these to the engine and the capture.
             self.settings = settings;
         }
-        let (capture_error, screens) = self.refresh_preview(&ctx);
         let found = std::mem::take(&mut engine::lock(&self.engine.status).found);
+        if !shown {
+            let mut changed = false;
+            for (id, light) in found {
+                if self.settings.lights.get(&id) != Some(&light) {
+                    self.settings.lights.insert(id, light);
+                    changed = true;
+                }
+            }
+            if changed {
+                self.changed();
+            }
+            if self.unsaved.is_some_and(|at| at.elapsed() >= SAVE_DELAY) {
+                self.save();
+            }
+            ctx.request_repaint_after(HIDDEN);
+            return;
+        }
+        let (capture_error, screens) = self.refresh_preview(&ctx);
         let status_handle = self.engine.status.clone();
         let status = engine::lock(&status_handle);
         let mut commands = Vec::new();

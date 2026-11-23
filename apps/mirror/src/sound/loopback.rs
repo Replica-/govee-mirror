@@ -19,8 +19,9 @@ use windows::core::GUID;
 use super::spectrum::{Analyzer, SIZE};
 use super::{Shared, lock};
 
-/// How often the thread reads the capture buffer.
-const TICK: Duration = Duration::from_millis(10);
+/// How often the thread reads the capture buffer. A faster read gains
+/// nothing: the hits come from the analysis.
+const TICK: Duration = Duration::from_millis(20);
 /// How often the thread analyses the newest window.
 const ANALYSIS: Duration = Duration::from_millis(20);
 /// How often the thread checks that the default output did not change. The
@@ -68,7 +69,11 @@ pub fn run(shared: &Shared) {
     let mut stream: Option<Stream> = None;
     let (mut analysed, mut checked) = (Instant::now(), Instant::now());
     loop {
-        if !lock(shared).settings.enabled {
+        let wanted = {
+            let state = lock(shared);
+            state.settings.enabled && (state.demand.mirror || state.demand.window)
+        };
+        if !wanted {
             if stream.take().is_some() {
                 lock(shared).silence();
             }

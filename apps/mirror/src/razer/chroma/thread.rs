@@ -9,6 +9,7 @@ use std::sync::{Mutex, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use super::super::hid;
 use super::devices::{Macros, Spec};
 use super::effects::{self, Frame};
 use super::{State, of, reports};
@@ -18,6 +19,8 @@ use crate::watcher::Switcher;
 /// How often the thread draws a frame and reads the macro keys. A frame that
 /// did not change is not sent.
 const TICK: Duration = Duration::from_millis(33);
+/// How often the thread reads the settings while it holds no device.
+const IDLE: Duration = Duration::from_millis(250);
 /// How often the thread looks for the device while it holds none.
 const LOOK: Duration = Duration::from_secs(5);
 /// How long the device takes a report before the answer is read.
@@ -94,7 +97,7 @@ pub fn run(
                 switcher.choose(profile);
             }
         }
-        thread::sleep(TICK);
+        thread::sleep(if held.is_some() { TICK } else { IDLE });
     }
     if let Some(current) = held {
         release(&current);
@@ -149,19 +152,17 @@ fn step(
 }
 
 fn find(spec: &Spec) -> Option<hidapi::DeviceInfo> {
-    let api = hidapi::HidApi::new().ok()?;
-    api.device_list()
-        .find(|d| {
-            d.vendor_id() == reports::VENDOR
-                && d.product_id() == spec.product
-                && d.interface_number() == spec.interface
-        })
-        .cloned()
+    hid::find(|d| {
+        d.vendor_id() == reports::VENDOR
+            && d.product_id() == spec.product
+            && d.interface_number() == spec.interface
+    })
+    .into_iter()
+    .next()
 }
 
 fn open(spec: &Spec, info: &hidapi::DeviceInfo) -> Result<Held, String> {
-    let api = hidapi::HidApi::new().map_err(|e| e.to_string())?;
-    let device = info.open_device(&api).map_err(|e| e.to_string())?;
+    let device = hid::open(info)?;
     let answer = request(&device, &reports::read_stored(spec.led))?;
     Ok(Held {
         device,
@@ -174,18 +175,15 @@ fn open(spec: &Spec, info: &hidapi::DeviceInfo) -> Result<Held, String> {
 /// Every collection that the macro keys can report on, read without a wait.
 /// The device lists more than one with the same usage.
 fn open_keys(spec: &Spec, macros: &Macros) -> Vec<hidapi::HidDevice> {
-    let Ok(api) = hidapi::HidApi::new() else {
-        return Vec::new();
-    };
-    api.device_list()
-        .filter(|d| {
-            d.vendor_id() == reports::VENDOR
-                && d.product_id() == spec.product
-                && d.interface_number() == macros.interface
-                && d.usage_page() == macros.usage_page
-                && d.usage() == macros.usage
-        })
-        .filter_map(|d| d.open_device(&api).ok())
+    hid::find(|d| {
+        d.vendor_id() == reports::VENDOR
+            && d.product_id() == spec.product
+            && d.interface_number() == macros.interface
+            && d.usage_page() == macros.usage_page
+            && d.usage() == macros.usage
+    })
+    .iter()
+    .filter_map(|d| hid::open(d).ok())
     .filter(|d| d.set_blocking_mode(false).is_ok())
     .collect()
 }

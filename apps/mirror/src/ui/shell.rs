@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use eframe::egui::{Context, ViewportCommand};
 
 use crate::startup;
-use crate::tray::Tray;
+use crate::tray::{HIDDEN, Tray};
 
 /// How often the `Run` entry is read again. The tray can change it while the
 /// window draws nothing.
@@ -37,9 +37,19 @@ impl Shell {
     /// checkbox's view of the `Run` entry. Answers whether the window shows
     /// after this frame.
     pub fn frame(&mut self, ctx: &Context, with_windows: &mut bool) -> bool {
-        let mut shown = !ctx.input(|i| i.viewport().minimized == Some(true));
+        let (minimized, occluded) = ctx.input(|i| {
+            let viewport = i.viewport();
+            (
+                viewport.minimized == Some(true),
+                viewport.occluded == Some(true),
+            )
+        });
+        let mut shown = !minimized && !occluded && !HIDDEN.load(Ordering::SeqCst);
         if std::mem::take(&mut self.hide) {
             shown = false;
+            if self.tray.is_some() {
+                HIDDEN.store(true, Ordering::SeqCst);
+            }
             ctx.send_viewport_cmd(match self.tray {
                 Some(_) => ViewportCommand::Visible(false),
                 None => ViewportCommand::Minimized(true),
@@ -51,6 +61,7 @@ impl Shell {
         if closing && self.tray.is_some() && !self.quitting.load(Ordering::SeqCst) {
             ctx.send_viewport_cmd(ViewportCommand::CancelClose);
             ctx.send_viewport_cmd(ViewportCommand::Visible(false));
+            HIDDEN.store(true, Ordering::SeqCst);
             shown = false;
         }
 

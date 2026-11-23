@@ -2,7 +2,7 @@
 //! the bass hits that raise the lights to their peak level.
 //!
 //! A thread captures the output while the settings that the engine hands it
-//! are on. The thread finds the hits at each analysis, and the engine takes
+//! are on, and the mirror or the window reads the result. The thread finds the hits at each analysis, and the engine takes
 //! them at its own frame rate, so that a hit between two frames still counts.
 
 mod detect;
@@ -56,6 +56,8 @@ pub struct State {
     /// The engine copies them from the app's settings. The thread captures
     /// while they are on.
     pub settings: Settings,
+    /// Who reads the analysis. With neither, the thread closes the capture.
+    pub demand: crate::capture::Demand,
     /// Each band from 0 to 1, lowest first, with a slow fall for the eye.
     /// Empty before the first analysis.
     pub bands: Vec<f32>,

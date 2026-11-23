@@ -24,6 +24,15 @@ release that carries `govee-mirror-pc.exe`. The policy is
 ### Changed
 
 - The profile row moves from above the grid to under the top bar.
+- Less CPU while the window is in the tray: the window draws nothing there,
+  where it drew every frame before.
+- The sound capture pauses while neither the mirror nor the window reads it,
+  and reads the output every 20 ms instead of every 10 ms.
+- The Razer devices share one list of the USB devices, refreshed every 10 s
+  at most. One list takes about half a second on a PC with many devices.
+- The screen capture shrinks each frame in one shader pass, in place of a
+  copy of the screen and a mip chain. On a 4K frame the GPU time went from
+  0.24 ms to 0.09 ms.
 
 ## [0.5.0] — 2026-11-23
 

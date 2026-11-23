@@ -9,6 +9,7 @@
 
 pub mod chroma;
 pub mod headset;
+pub mod hid;
 pub mod protocol;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -58,10 +59,8 @@ pub fn acquire() -> Result<Arc<Controller>, String> {
 
 /// Whether a controller is connected. Opens nothing.
 pub fn present() -> bool {
-    hidapi::HidApi::new().is_ok_and(|api| {
-        api.device_list()
-            .any(|d| d.vendor_id() == protocol::VENDOR && d.product_id() == protocol::PRODUCT)
-    })
+    !hid::find(|d| d.vendor_id() == protocol::VENDOR && d.product_id() == protocol::PRODUCT)
+        .is_empty()
 }
 
 /// Whether Synapse runs. It streams its own frames to the controller and
@@ -139,23 +138,19 @@ impl Drop for Controller {
 
 fn run(state: &Mutex<State>, stop: &AtomicBool, opened: &mpsc::Sender<Result<(), String>>) {
     let open = || -> Result<(hidapi::HidDevice, hidapi::HidDevice), String> {
-        let api = hidapi::HidApi::new().map_err(|e| e.to_string())?;
-        let path = |interface| {
-            api.device_list()
-                .find(|d| {
-                    d.vendor_id() == protocol::VENDOR
-                        && d.product_id() == protocol::PRODUCT
-                        && d.interface_number() == interface
-                })
-                .map(|d| d.path().to_owned())
-                .ok_or_else(|| "no Razer ARGB controller is connected".to_owned())
+        let open = |interface| {
+            let found = hid::find(|d| {
+                d.vendor_id() == protocol::VENDOR
+                    && d.product_id() == protocol::PRODUCT
+                    && d.interface_number() == interface
+            });
+            let info = found
+                .first()
+                .ok_or_else(|| "no Razer ARGB controller is connected".to_owned())?;
+            hid::open(info)
         };
-        let control = api
-            .open_path(&path(protocol::CONTROL_INTERFACE)?)
-            .map_err(|e| e.to_string())?;
-        let frames = api
-            .open_path(&path(protocol::FRAME_INTERFACE)?)
-            .map_err(|e| e.to_string())?;
+        let control = open(protocol::CONTROL_INTERFACE)?;
+        let frames = open(protocol::FRAME_INTERFACE)?;
         control
             .send_feature_report(&protocol::host_control(true))
             .map_err(|e| e.to_string())?;

@@ -1,9 +1,8 @@
-//! DXGI Desktop Duplication, shrunk with the GPU's mipmap chain.
+//! DXGI Desktop Duplication, shrunk on the GPU.
 //!
-//! The desktop arrives as a GPU texture. It is copied into a texture with a
-//! full mip chain, the GPU averages it down, and one small level comes back to
-//! the CPU: about 256 pixels wide, so a frame costs well under a megabyte of
-//! readback. A screen that does not change delivers no frame, and costs
+//! The desktop arrives as a GPU texture. One shader pass averages it down
+//! ([`super::shrink`]), and the small image comes back to the CPU: about 256
+//! pixels wide, so a frame costs well under a megabyte of readback. A screen that does not change delivers no frame, and costs
 //! nothing.
 //!
 //! Every call into Direct3D is `unsafe`: the `windows` crate marks all COM
@@ -16,32 +15,20 @@ use std::time::Duration;
 use windows::Win32::Foundation::HMODULE;
 use windows::Win32::Graphics::Direct3D::D3D_DRIVER_TYPE_UNKNOWN;
 use windows::Win32::Graphics::Direct3D11::{
-    D3D11_BIND_RENDER_TARGET, D3D11_BIND_SHADER_RESOURCE, D3D11_CPU_ACCESS_READ,
-    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ, D3D11_MAPPED_SUBRESOURCE,
-    D3D11_RESOURCE_MISC_GENERATE_MIPS, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
-    D3D11_USAGE_DEFAULT, D3D11_USAGE_STAGING, D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext,
-    ID3D11ShaderResourceView, ID3D11Texture2D,
+    D3D11_CREATE_DEVICE_BGRA_SUPPORT, D3D11_MAP_READ, D3D11_MAPPED_SUBRESOURCE, D3D11_SDK_VERSION,
+    D3D11_TEXTURE2D_DESC, D3D11CreateDevice, ID3D11Device, ID3D11DeviceContext, ID3D11Texture2D,
 };
-use windows::Win32::Graphics::Dxgi::Common::{DXGI_FORMAT_B8G8R8A8_UNORM, DXGI_SAMPLE_DESC};
+use windows::Win32::Graphics::Dxgi::Common::DXGI_FORMAT_B8G8R8A8_UNORM;
 use windows::Win32::Graphics::Dxgi::{
     CreateDXGIFactory1, DXGI_ERROR_WAIT_TIMEOUT, DXGI_OUTDUPL_FRAME_INFO, IDXGIAdapter1,
     IDXGIFactory1, IDXGIOutput, IDXGIOutput1, IDXGIOutput5, IDXGIOutputDuplication, IDXGIResource,
 };
 use windows::core::{Interface, Result};
 
-/// The width the readback level reaches at least.
-const READBACK_WIDTH: u32 = 256;
+use super::shrink::Shrink;
 
-/// The textures that follow the size of the screen.
-struct Chain {
-    width: u32,
-    height: u32,
-    mips: ID3D11Texture2D,
-    view: ID3D11ShaderResourceView,
-    level: u32,
-    staging: ID3D11Texture2D,
-    staged: (u32, u32),
-}
+/// The width the readback reaches at least.
+const READBACK_WIDTH: u32 = 256;
 
 pub struct Duplicator {
     /// One name per screen, in the order that `new` takes its index.
@@ -49,7 +36,7 @@ pub struct Duplicator {
     device: ID3D11Device,
     context: ID3D11DeviceContext,
     duplication: IDXGIOutputDuplication,
-    chain: Option<Chain>,
+    chain: Option<Shrink>,
 }
 
 impl Duplicator {
@@ -139,31 +126,20 @@ impl Duplicator {
         if self
             .chain
             .as_ref()
-            .is_none_or(|c| (c.width, c.height) != (desc.Width, desc.Height))
+            .is_none_or(|c| c.source != (desc.Width, desc.Height))
         {
-            self.chain = Some(self.build(desc.Width, desc.Height)?);
+            let mut level = 0;
+            while (desc.Width >> (level + 1)) >= READBACK_WIDTH {
+                level += 1;
+            }
+            self.chain = Some(Shrink::new(&self.device, desc.Width, desc.Height, level)?);
         }
-        let Some(chain) = self.chain.as_ref() else {
+        let Some(chain) = self.chain.as_mut() else {
             return Ok(None);
         };
+        chain.run(&self.device, &self.context, &texture)?;
 
-        unsafe {
-            self.context
-                .CopySubresourceRegion(&chain.mips, 0, 0, 0, 0, &texture, 0, None);
-            self.context.GenerateMips(&chain.view);
-            self.context.CopySubresourceRegion(
-                &chain.staging,
-                0,
-                0,
-                0,
-                0,
-                &chain.mips,
-                chain.level,
-                None,
-            );
-        }
-
-        let (width, height) = chain.staged;
+        let (width, height) = chain.size;
         let mut mapped = D3D11_MAPPED_SUBRESOURCE::default();
         unsafe {
             self.context
@@ -189,64 +165,6 @@ impl Duplicator {
         }
         unsafe { self.context.Unmap(&chain.staging, 0) };
         Ok(Some((width, height, rgba)))
-    }
-
-    fn build(&self, width: u32, height: u32) -> Result<Chain> {
-        let mut level = 0;
-        while (width >> (level + 1)) >= READBACK_WIDTH {
-            level += 1;
-        }
-        let staged = ((width >> level).max(1), (height >> level).max(1));
-
-        let mips_desc = D3D11_TEXTURE2D_DESC {
-            Width: width,
-            Height: height,
-            MipLevels: 0,
-            ArraySize: 1,
-            Format: DXGI_FORMAT_B8G8R8A8_UNORM,
-            SampleDesc: DXGI_SAMPLE_DESC {
-                Count: 1,
-                Quality: 0,
-            },
-            Usage: D3D11_USAGE_DEFAULT,
-            BindFlags: (D3D11_BIND_SHADER_RESOURCE.0 | D3D11_BIND_RENDER_TARGET.0) as u32,
-            CPUAccessFlags: 0,
-            MiscFlags: D3D11_RESOURCE_MISC_GENERATE_MIPS.0 as u32,
-        };
-        let staging_desc = D3D11_TEXTURE2D_DESC {
-            Width: staged.0,
-            Height: staged.1,
-            MipLevels: 1,
-            Usage: D3D11_USAGE_STAGING,
-            BindFlags: 0,
-            CPUAccessFlags: D3D11_CPU_ACCESS_READ.0 as u32,
-            MiscFlags: 0,
-            ..mips_desc
-        };
-
-        let mut mips = None;
-        let mut staging = None;
-        let mut view = None;
-        unsafe {
-            self.device
-                .CreateTexture2D(&mips_desc, None, Some(&mut mips))?;
-            self.device
-                .CreateTexture2D(&staging_desc, None, Some(&mut staging))?;
-        }
-        let mips = mips.ok_or_else(windows::core::Error::empty)?;
-        unsafe {
-            self.device
-                .CreateShaderResourceView(&mips, None, Some(&mut view))
-        }?;
-        Ok(Chain {
-            width,
-            height,
-            mips,
-            view: view.ok_or_else(windows::core::Error::empty)?,
-            level,
-            staging: staging.ok_or_else(windows::core::Error::empty)?,
-            staged,
-        })
     }
 }
 

@@ -28,8 +28,13 @@ impl Tray {
     }
 }
 
+/// Whether the window is hidden in the tray. egui reports no visibility:
+/// the shell sets this when it hides the window, and [`show`] clears it.
+pub static HIDDEN: AtomicBool = AtomicBool::new(false);
+
 /// Show the window, restored and in front.
 pub fn show(ctx: &Context) {
+    HIDDEN.store(false, Ordering::SeqCst);
     ctx.send_viewport_cmd(ViewportCommand::Visible(true));
     ctx.send_viewport_cmd(ViewportCommand::Minimized(false));
     ctx.send_viewport_cmd(ViewportCommand::Focus);

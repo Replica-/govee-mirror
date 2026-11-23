@@ -345,10 +345,12 @@ impl Context {
         }
     }
 
-    /// Tell the capture whether the mirror reads the screen.
+    /// Tell the capture whether the mirror reads the screen, and the sound
+    /// whether the mirror reads the hits.
     fn demand(&self) {
         capture::lock(&self.capture).demand.mirror =
             self.mirror.is_some() && self.settings.source == pattern::Source::Screen;
+        sound::lock(&self.sound).demand.mirror = self.mirror.is_some();
     }
 
     fn message(&self, id: &str, text: String) {

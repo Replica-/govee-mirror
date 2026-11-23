@@ -6,6 +6,8 @@
 
 #[cfg(windows)]
 mod dxgi;
+#[cfg(windows)]
+mod shrink;
 
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;

@@ -241,13 +241,26 @@ ends the segment channel on some models. Brightness stays available.
 
 ## How the capture works
 
-DXGI Desktop Duplication hands over the screen as a GPU texture. The GPU
-shrinks it with its mipmap chain, and a copy about 256 pixels wide comes back
-to the CPU. A screen that does not change delivers no frame. An HDR screen is
-captured in 8 bits per channel. The capture runs at the mirror rate while
-the mirror reads the screen, and at 10 frames per second while only the
-window preview needs it. With neither, it stops and releases the screen. `src/capture/dxgi.rs` is the one module with
-`unsafe` code: every Direct3D call is a COM call.
+DXGI Desktop Duplication hands over the screen as a GPU texture. One pixel
+shader shrinks it: each output pixel is the mean of a square block of screen
+pixels, and the shader reads each screen pixel once. An image about 256
+pixels wide comes back to the CPU. On a 4K frame the pass took 0.09 ms of GPU
+time, measured on one NVIDIA GPU. The shader is compiled at start with the
+compiler that Windows 10 and 11 carry, and it needs a Direct3D 10 GPU or
+later.
+
+- A screen that does not change delivers no frame, and costs nothing.
+- An HDR screen is captured in 8 bits per channel.
+- The capture runs at the mirror rate while the mirror reads the screen, and
+  at 10 frames per second while only the window preview needs it. With
+  neither, it stops and releases the screen.
+- The window draws nothing while it is in the tray. The sound capture stops
+  while neither the mirror nor the window reads it.
+
+The modules that call Windows directly allow `unsafe` code, because the
+`windows` crate marks every COM and Win32 call so: the capture
+(`src/capture/`), the sound (`src/audio.rs`, `src/sound/loopback.rs`), the
+notification, the process list and the usage readout.
 
 ## Files
 

@@ -125,19 +125,17 @@ fn run(library: &Mutex<Library>, state: &Shared) {
 }
 
 fn dongle() -> Option<hidapi::DeviceInfo> {
-    let api = hidapi::HidApi::new().ok()?;
-    api.device_list()
-        .find(|d| {
-            d.vendor_id() == super::protocol::VENDOR
-                && d.product_id() == PRODUCT
-                && d.usage_page() == USAGE_PAGE
-        })
-        .cloned()
+    super::hid::find(|d| {
+        d.vendor_id() == super::protocol::VENDOR
+            && d.product_id() == PRODUCT
+            && d.usage_page() == USAGE_PAGE
+    })
+    .into_iter()
+    .next()
 }
 
 fn open() -> Option<hidapi::HidDevice> {
-    let api = hidapi::HidApi::new().ok()?;
-    dongle()?.open_device(&api).ok()
+    super::hid::open(&dongle()?).ok()
 }
 
 /// Read reports until the dongle goes away or the switch goes off.
