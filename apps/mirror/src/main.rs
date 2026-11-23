@@ -5,9 +5,7 @@
 mod audio;
 mod capture;
 mod engine;
-mod hotkey;
 mod mapping;
-mod monitor;
 mod notify;
 mod pattern;
 mod process;

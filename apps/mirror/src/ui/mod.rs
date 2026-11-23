@@ -8,7 +8,6 @@ mod grid;
 mod headset;
 mod hosts;
 mod levels;
-mod monitor;
 mod palette;
 mod profiles;
 mod shell;
@@ -48,8 +47,6 @@ pub struct App {
     brush: Brush,
     controls: devices::Controls,
     headset: headset::Panel,
-    monitor: monitor::Panel,
-    _hotkeys: Option<crate::hotkey::Hotkeys>,
     shell: Shell,
     profiles: Profiles,
     usage: usage::Shared,
@@ -71,8 +68,6 @@ impl App {
         let headset = headset::Panel::new(razer::headset::spawn(std::sync::Arc::clone(
             &profiles.library,
         )));
-        let (monitor_state, monitor_send) = crate::monitor::spawn();
-        let hotkeys = crate::hotkey::spawn(monitor_send.clone());
         Self {
             runtime,
             engine,
@@ -85,8 +80,6 @@ impl App {
             brush: Brush::default(),
             controls: devices::Controls::default(),
             headset,
-            monitor: monitor::Panel::new(monitor_state, monitor_send, hotkeys.is_some()),
-            _hotkeys: hotkeys,
             shell,
             profiles,
             usage,
@@ -216,7 +209,6 @@ impl eframe::App for App {
                         &mut self.brush,
                         &mut self.controls,
                         &mut self.headset,
-                        &mut self.monitor,
                     );
                     commands.extend(sent);
                     changed |= edited;

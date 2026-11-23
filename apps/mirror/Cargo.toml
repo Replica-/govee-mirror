@@ -30,8 +30,6 @@ serde_json = "1"
 tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "macros"] }
 
 [target.'cfg(windows)'.dependencies]
-# The hotkeys that switch the monitor's input.
-global-hotkey = "0.7"
 # The tray icon and its menu.
 tray-icon = "0.26"
 # The start-with-Windows entry, through a safe API.
@@ -41,8 +39,6 @@ windows-core = "0.62"
 windows = { version = "0.62", features = [
   # The notification at a headset switch.
   "Data_Xml_Dom",
-  # The monitor's input over DDC/CI.
-  "Win32_Devices_Display",
   "UI_Notifications",
   "Win32_Foundation",
   # The sound outputs, for the headset switch.

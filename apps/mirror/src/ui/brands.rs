@@ -11,7 +11,6 @@ use crate::settings::Settings;
 pub enum Brand {
     Govee,
     Razer,
-    Msi,
 }
 
 impl Brand {
@@ -27,7 +26,6 @@ impl Brand {
         match self {
             Self::Govee => "GOVEE",
             Self::Razer => "RAZER",
-            Self::Msi => "MSI",
         }
     }
 
@@ -35,13 +33,12 @@ impl Brand {
         match self {
             Self::Govee => Color32::from_rgb(70, 160, 240),
             Self::Razer => Color32::from_rgb(68, 214, 44),
-            Self::Msi => Color32::from_rgb(230, 50, 50),
         }
     }
 }
 
 /// A frame in the brand's color, with a filled header strip.
-pub fn section(ui: &mut Ui, brand: Brand, count: &str, add: impl FnOnce(&mut Ui)) {
+pub fn section(ui: &mut Ui, brand: Brand, lights: usize, add: impl FnOnce(&mut Ui)) {
     let color = brand.color();
     egui::Frame::new()
         .stroke(Stroke::new(1.5, color))
@@ -62,7 +59,8 @@ pub fn section(ui: &mut Ui, brand: Brand, count: &str, add: impl FnOnce(&mut Ui)
                     ui.horizontal(|ui| {
                         let ink = Color32::from_gray(15);
                         ui.label(RichText::new(brand.title()).strong().size(14.0).color(ink));
-                        ui.label(RichText::new(count).color(ink));
+                        let noun = if lights == 1 { "light" } else { "lights" };
+                        ui.label(RichText::new(format!("{lights} {noun}")).color(ink));
                     });
                 });
             egui::Frame::new().inner_margin(6).show(ui, add);
